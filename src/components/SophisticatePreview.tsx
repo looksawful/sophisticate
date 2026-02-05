@@ -43,6 +43,7 @@ export default function SophisticatePreview() {
   } | null>(null);
 
   const fileUrlRef = useRef("");
+  const fileRef = useRef<File | null>(null);
   const [logs, setLogs] = useState<string[]>(["Ready"]);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -60,6 +61,7 @@ export default function SophisticatePreview() {
     setFileName(f.name);
     setFileMeta({ size: f.size, type: f.type || "" });
     addLog(`[input] file: ${f.name} (${prettyBytes(f.size)})`);
+    fileRef.current = f;
 
     if (fileUrlRef.current) URL.revokeObjectURL(fileUrlRef.current);
     const u = URL.createObjectURL(f);
@@ -88,6 +90,7 @@ export default function SophisticatePreview() {
     setLogs(["Ready"]);
     setUrl("");
     setCrop({ x: 0.2, y: 0.2, w: 0.6, h: 0.6 });
+    fileRef.current = null;
 
     if (fileUrlRef.current) URL.revokeObjectURL(fileUrlRef.current);
     fileUrlRef.current = "";
@@ -181,6 +184,19 @@ export default function SophisticatePreview() {
       }, 650 * (i + 1));
     });
   }, [crop, fileName, format, lockSquare, maxSize]);
+
+  const handleDownload = useCallback(() => {
+    const file = fileRef.current;
+    if (!file) return;
+    const href = fileUrl || URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = fileName || "video";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    if (!fileUrl) URL.revokeObjectURL(href);
+  }, [fileName, fileUrl]);
 
   function startDrag(e: React.PointerEvent, mode: "move" | "se" | "e" | "s") {
     e.preventDefault();
@@ -385,6 +401,7 @@ export default function SophisticatePreview() {
 
                   <motion.button
                     {...hoverLift}
+                    onClick={handleDownload}
                     disabled={!fileName}
                     className="w-full rounded-2xl px-6 py-4 sm:py-5 text-lg sm:text-xl font-semibold border border-neutral-800 bg-neutral-950/30 hover:border-pink-500 transition disabled:opacity-40"
                   >
