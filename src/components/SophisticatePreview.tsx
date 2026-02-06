@@ -47,6 +47,9 @@ export default function SophisticatePreview() {
   const [logs, setLogs] = useState<string[]>(["Ready"]);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [resultUrl, setResultUrl] = useState("");
+  const resultUrlRef = useRef("");
 
   const canConvert = !!fileName && !processing;
 
@@ -67,6 +70,11 @@ export default function SophisticatePreview() {
     const u = URL.createObjectURL(f);
     fileUrlRef.current = u;
     setFileUrl(u);
+
+    if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
+    resultUrlRef.current = "";
+    setResultUrl("");
+    setResultBlob(null);
 
     setLockSquare(true);
     setCrop({ x: 0.2, y: 0.2, w: 0.6, h: 0.6 });
@@ -95,6 +103,11 @@ export default function SophisticatePreview() {
     if (fileUrlRef.current) URL.revokeObjectURL(fileUrlRef.current);
     fileUrlRef.current = "";
     setFileUrl("");
+
+    if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
+    resultUrlRef.current = "";
+    setResultUrl("");
+    setResultBlob(null);
   }, []);
 
   function handleDrop(e: React.DragEvent) {
@@ -156,36 +169,67 @@ export default function SophisticatePreview() {
     }
   }, [addLog, setFile, url]);
 
-  const fakeProcess = useCallback(() => {
-    if (!fileName) return;
+  const realProcess = useCallback(async () => {
+    if (!fileName || !fileRef.current) return;
+
+    const v = videoRef.current;
+    if (!v || !v.videoWidth || !v.videoHeight) {
+      addLog("[error] video metadata not loaded yet");
+      return;
+    }
 
     setProcessing(true);
     setProgress(0);
     setLogs([
       "[run] start",
-      `[run] max size=${maxSize} MB`,
-      `[run] format=${format}`,
+      `[run] max size=${maxSize} MB, format=${format}`,
       `[run] crop=${lockSquare ? "square" : "free"} x=${crop.x.toFixed(3)} y=${crop.y.toFixed(3)} w=${crop.w.toFixed(3)} h=${crop.h.toFixed(3)}`,
     ]);
 
-    const steps = [
-      "[meta] analyzing...",
-      "[crop] applying...",
-      "[encode] compressing...",
-      "[size] validating...",
-      "[done] under limit",
-    ];
+    if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
+    resultUrlRef.current = "";
+    setResultUrl("");
+    setResultBlob(null);
 
-    steps.forEach((step, i) => {
-      window.setTimeout(() => {
-        setLogs((prev) => [...prev, step]);
-        setProgress((i + 1) / steps.length);
-        if (i === steps.length - 1) setProcessing(false);
-      }, 650 * (i + 1));
-    });
-  }, [crop, fileName, format, lockSquare, maxSize]);
+    try {
+      const { processVideo } = await import("@/lib/processVideo");
+      const blob = await processVideo(fileRef.current, {
+        crop,
+        maxSizeMB: parseFloat(maxSize) || 0.49,
+        format,
+        videoWidth: v.videoWidth,
+        videoHeight: v.videoHeight,
+        duration: v.duration || 1,
+        onLog: addLog,
+        onProgress: setProgress,
+      });
+
+      setResultBlob(blob);
+      const u = URL.createObjectURL(blob);
+      resultUrlRef.current = u;
+      setResultUrl(u);
+      addLog("[complete] ready to download");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      addLog(`[error] ${msg}`);
+    } finally {
+      setProcessing(false);
+    }
+  }, [addLog, crop, fileName, format, lockSquare, maxSize]);
 
   const handleDownload = useCallback(() => {
+    if (resultBlob) {
+      const href = resultUrlRef.current || URL.createObjectURL(resultBlob);
+      const ext = format === "WEBM" ? ".webm" : ".mp4";
+      const base = fileName.replace(/\.[^.]+$/, "") || "video";
+      const link = document.createElement("a");
+      link.href = href;
+      link.download = `${base}_sophisticate${ext}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return;
+    }
     const file = fileRef.current;
     if (!file) return;
     const href = fileUrl || URL.createObjectURL(file);
@@ -196,7 +240,7 @@ export default function SophisticatePreview() {
     link.click();
     link.remove();
     if (!fileUrl) URL.revokeObjectURL(href);
-  }, [fileName, fileUrl]);
+  }, [fileName, fileUrl, format, resultBlob]);
 
   function startDrag(e: React.PointerEvent, mode: "move" | "se" | "e" | "s") {
     e.preventDefault();
@@ -273,7 +317,7 @@ export default function SophisticatePreview() {
         inputRef.current?.click();
       }
       if (e.key === "Enter" && canConvert && !isEditableTarget) {
-        fakeProcess();
+        realProcess();
       }
       if (e.key === "Escape") {
         clearAll();
@@ -282,11 +326,12 @@ export default function SophisticatePreview() {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [canConvert, clearAll, fakeProcess]);
+  }, [canConvert, clearAll, realProcess]);
 
   useEffect(() => {
     return () => {
       if (fileUrlRef.current) URL.revokeObjectURL(fileUrlRef.current);
+      if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
     };
   }, []);
 
@@ -392,7 +437,7 @@ export default function SophisticatePreview() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <motion.button
                     {...hoverLift}
-                    onClick={fakeProcess}
+                    onClick={realProcess}
                     disabled={!canConvert}
                     className="w-full rounded-2xl px-6 py-4 sm:py-5 text-lg sm:text-xl font-semibold bg-pink-600 hover:bg-pink-500 transition disabled:opacity-40"
                   >
@@ -405,7 +450,7 @@ export default function SophisticatePreview() {
                     disabled={!fileName}
                     className="w-full rounded-2xl px-6 py-4 sm:py-5 text-lg sm:text-xl font-semibold border border-neutral-800 bg-neutral-950/30 hover:border-pink-500 transition disabled:opacity-40"
                   >
-                    Download
+                    {resultBlob ? `Download (${prettyBytes(resultBlob.size)})` : "Download"}
                   </motion.button>
                 </div>
               </div>

@@ -29,3 +29,20 @@ export function prettyBytes(bytes: number) {
   const d = i === 0 ? 0 : i === 1 ? 1 : 2;
   return `${n.toFixed(d)} ${units[i]}`;
 }
+
+export function cropPixels(crop: Crop, videoWidth: number, videoHeight: number) {
+  const x = Math.round(crop.x * videoWidth);
+  const y = Math.round(crop.y * videoHeight);
+  let w = Math.round(crop.w * videoWidth);
+  let h = Math.round(crop.h * videoHeight);
+  if (w % 2 !== 0) w -= 1;
+  if (h % 2 !== 0) h -= 1;
+  return { x, y, w: Math.max(2, w), h: Math.max(2, h) };
+}
+
+export function targetBitrate(maxSizeMB: number, durationSec: number, audioBitrateKbps = 128) {
+  const bytes = maxSizeMB * 1024 * 1024;
+  const bits = bytes * 8;
+  const totalKbps = bits / Math.max(1, durationSec) / 1000;
+  return Math.max(50, Math.floor(totalKbps - audioBitrateKbps));
+}
