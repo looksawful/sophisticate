@@ -83,4 +83,52 @@ describe("targetBitrate", () => {
     const b = targetBitrate(1, 10, 256);
     expect(a).toBeGreaterThan(b);
   });
+
+  it("scales with size", () => {
+    const a = targetBitrate(1, 10);
+    const b = targetBitrate(2, 10);
+    expect(b).toBeGreaterThan(a);
+    expect(b).toBeCloseTo(a * 2 + 128, -2);
+  });
+
+  it("yields smaller bitrate for longer duration", () => {
+    const short = targetBitrate(1, 5);
+    const long = targetBitrate(1, 30);
+    expect(short).toBeGreaterThan(long);
+  });
+});
+
+describe("normalizeCrop edge cases", () => {
+  it("returns identity for full-frame crop", () => {
+    const crop = normalizeCrop({ x: 0, y: 0, w: 1, h: 1 });
+    expect(crop).toEqual({ x: 0, y: 0, w: 1, h: 1 });
+  });
+
+  it("shifts x when crop extends beyond right edge", () => {
+    const crop = normalizeCrop({ x: 0.8, y: 0, w: 0.5, h: 0.5 });
+    expect(crop.x).toBe(0.5);
+    expect(crop.w).toBe(0.5);
+  });
+
+  it("shifts y when crop extends beyond bottom edge", () => {
+    const crop = normalizeCrop({ x: 0, y: 0.9, w: 0.3, h: 0.3 });
+    expect(crop.y).toBe(0.7);
+    expect(crop.h).toBe(0.3);
+  });
+});
+
+describe("cropPixels edge cases", () => {
+  it("handles full-frame crop", () => {
+    const px = cropPixels({ x: 0, y: 0, w: 1, h: 1 }, 1920, 1080);
+    expect(px.x).toBe(0);
+    expect(px.y).toBe(0);
+    expect(px.w).toBe(1920);
+    expect(px.h).toBe(1080);
+  });
+
+  it("aligns even pixels for odd resolution", () => {
+    const px = cropPixels({ x: 0, y: 0, w: 1, h: 1 }, 1921, 1081);
+    expect(px.w % 2).toBe(0);
+    expect(px.h % 2).toBe(0);
+  });
 });
