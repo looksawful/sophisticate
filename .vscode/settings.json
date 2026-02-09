@@ -1,0 +1,4 @@
+{
+  "simpleBrowser.defaultUrl": "http://localhost:3000",
+  "debug.javascript.autoAttachFilter": "smart"
+}

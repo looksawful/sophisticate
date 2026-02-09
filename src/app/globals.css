@@ -8,3 +8,67 @@ html, body { height: 100%; }
 body { background: transparent; }
 body { font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif; }
 code, kbd, pre { font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.soph-input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.soph-input[type="number"]::-webkit-outer-spin-button,
+.soph-input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.soph-range {
+  accent-color: rgb(236, 72, 153);
+}
+
+.soph-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #ec4899;
+  border: 2px solid #fdf2f8;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.18);
+  cursor: pointer;
+}
+
+.soph-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #ec4899;
+  border: 2px solid #fdf2f8;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.18);
+  cursor: pointer;
+}
+
+.result-player-shell {
+  --media-control-bg: rgba(18, 18, 20, 0.75);
+  --media-control-hover-bg: rgba(28, 28, 32, 0.9);
+  --media-tooltip-bg: rgba(16, 16, 18, 0.96);
+  --media-menu-bg: rgba(12, 12, 14, 0.92);
+  --media-border-color: rgba(255, 255, 255, 0.1);
+  --media-focus-ring-color: rgba(236, 72, 153, 0.6);
+  --media-range-track-bg: rgba(255, 255, 255, 0.22);
+  --media-range-bar-bg: rgba(236, 72, 153, 0.95);
+  --media-slider-thumb-bg: #ffffff;
+}
+
+.result-player-shell media-player {
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

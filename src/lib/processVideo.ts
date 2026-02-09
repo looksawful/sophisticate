@@ -5,6 +5,24 @@ import { type Crop, cropPixels, prettyBytes, targetBitrate } from "./videoUtils"
 let ffmpegInstance: FFmpeg | null = null;
 let runningFFmpeg: FFmpeg | null = null;
 
+function buildAtempoFilters(speed: number): string[] {
+  if (!(speed > 0) || speed === 1) return [];
+  const filters: string[] = [];
+  let remaining = speed;
+
+  while (remaining < 0.5) {
+    filters.push("atempo=0.5");
+    remaining /= 0.5;
+  }
+  while (remaining > 2) {
+    filters.push("atempo=2.0");
+    remaining /= 2;
+  }
+
+  filters.push(`atempo=${remaining.toFixed(4)}`);
+  return filters;
+}
+
 async function getFFmpeg(): Promise<FFmpeg> {
   if (ffmpegInstance?.loaded) return ffmpegInstance;
   const ff = new FFmpeg();
@@ -32,6 +50,7 @@ export interface ProcessOptions {
   loop?: number;
   fps?: number;
   quality?: "low" | "medium" | "high";
+  includeAudio?: boolean;
 }
 
 export function stopProcessing(): void {
@@ -43,8 +62,21 @@ export function stopProcessing(): void {
 
 export async function processVideo(file: File, options: ProcessOptions): Promise<Blob> {
   const {
-    crop, maxSizeMB, format, videoWidth, videoHeight, duration, onLog, onProgress,
-    trimStart, trimEnd, speed = 1, loop = 1, fps, quality = "medium",
+    crop,
+    maxSizeMB,
+    format,
+    videoWidth,
+    videoHeight,
+    duration,
+    onLog,
+    onProgress,
+    trimStart,
+    trimEnd,
+    speed = 1,
+    loop = 1,
+    fps,
+    quality = "medium",
+    includeAudio = true,
   } = options;
 
   onLog("[init] loading FFmpeg WASM core...");
@@ -78,8 +110,8 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
     const vfArg = filters.join(",");
 
     const audioFilters: string[] = [];
-    if (speed !== 1 && speed > 0) {
-      audioFilters.push(`atempo=${Math.max(0.5, Math.min(2, speed))}`);
+    if (includeAudio && speed !== 1 && speed > 0) {
+      audioFilters.push(...buildAtempoFilters(speed));
     }
 
     const inputArgs: string[] = [];
@@ -88,7 +120,7 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
     }
     inputArgs.push("-i", inputName);
     if (trimEnd !== undefined && trimEnd > 0 && trimEnd < duration) {
-      const dur = (trimEnd - (trimStart || 0));
+      const dur = trimEnd - (trimStart || 0);
       if (dur > 0) inputArgs.push("-t", dur.toFixed(3));
     }
 
@@ -96,12 +128,12 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
       inputArgs.splice(0, 0, "-stream_loop", String(loop - 1));
     }
 
-    const trimmedDuration = ((trimEnd || duration) - (trimStart || 0)) * loop / Math.max(0.25, speed);
+    const trimmedDuration = (((trimEnd || duration) - (trimStart || 0)) * loop) / Math.max(0.25, speed);
 
     const presetMap = { low: "ultrafast", medium: "medium", high: "slow" } as const;
     const preset = presetMap[quality] || "medium";
 
-    const aBitrate = 128;
+    const aBitrate = includeAudio ? 128 : 0;
     const outputName = format === "WEBM" ? "output.webm" : "output.mp4";
 
     const maxBytes = maxSizeMB * 1024 * 1024;
@@ -115,7 +147,7 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
     ff.on("progress", pass1handler);
 
     const baseArgs = [...inputArgs, "-vf", vfArg];
-    if (audioFilters.length > 0) {
+    if (includeAudio && audioFilters.length > 0) {
       baseArgs.push("-af", audioFilters.join(","));
     }
 
@@ -126,10 +158,7 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
         "libvpx",
         "-b:v",
         `${vBitrate}k`,
-        "-c:a",
-        "libvorbis",
-        "-b:a",
-        `${aBitrate}k`,
+        ...(includeAudio ? ["-c:a", "libvorbis", "-b:a", `${aBitrate}k`] : ["-an"]),
         "-y",
         outputName,
       ];
@@ -149,10 +178,7 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
         `${Math.round(vBitrate * 1.1)}k`,
         "-bufsize",
         `${vBitrate * 2}k`,
-        "-c:a",
-        "aac",
-        "-b:a",
-        `${aBitrate}k`,
+        ...(includeAudio ? ["-c:a", "aac", "-b:a", `${aBitrate}k`] : ["-an"]),
         "-movflags",
         "+faststart",
         "-y",
@@ -188,10 +214,7 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
           "libvpx",
           "-b:v",
           `${vBitrate2}k`,
-          "-c:a",
-          "libvorbis",
-          "-b:a",
-          `${aBitrate}k`,
+          ...(includeAudio ? ["-c:a", "libvorbis", "-b:a", `${aBitrate}k`] : ["-an"]),
           "-y",
           outputName,
         ];
@@ -211,10 +234,7 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
           `${Math.round(vBitrate2 * 1.1)}k`,
           "-bufsize",
           `${vBitrate2 * 2}k`,
-          "-c:a",
-          "aac",
-          "-b:a",
-          `${aBitrate}k`,
+          ...(includeAudio ? ["-c:a", "aac", "-b:a", `${aBitrate}k`] : ["-an"]),
           "-movflags",
           "+faststart",
           "-y",

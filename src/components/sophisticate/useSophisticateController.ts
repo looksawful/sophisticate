@@ -10,8 +10,8 @@ import { ASPECT_PRESETS, type AspectPreset } from "./config";
 export function useSophisticateController() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const circleCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const logsEndRef = useRef<HTMLDivElement | null>(null);
+  const cropperVideoRef = useRef<React.RefObject<HTMLVideoElement> | null>(null);
 
   const [fileName, setFileName] = useState("");
   const [fileMeta, setFileMeta] = useState({ size: 0, type: "" });
@@ -24,24 +24,27 @@ export function useSophisticateController() {
   const [crop, setCrop] = useState<Crop>({ x: 0, y: 0, w: 1, h: 1 });
   const [activePreset, setActivePreset] = useState<string>("1:1");
   const [showResult, setShowResult] = useState(false);
-  const [videoDuration, setVideoDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
 
   const [uiCrop, setUiCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-
+  const [zoom, setZoomRaw] = useState(1);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(0);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+
   const [speed, setSpeed] = useState(1);
   const [loopCount, setLoopCount] = useState(1);
   const [fps, setFps] = useState(0);
   const [quality, setQuality] = useState<"low" | "medium" | "high">("medium");
-  const [showCirclePreview, setShowCirclePreview] = useState(false);
+  const [includeAudio, setIncludeAudio] = useState(true);
+  const [showCirclePreview, setShowCirclePreview] = useState(true);
 
   const fileUrlRef = useRef("");
   const fileRef = useRef<File | null>(null);
   const [logs, setLogs] = useState<string[]>(["Ready"]);
+  const [logFilter, setLogFilter] = useState<"all" | "process" | "errors" | "ffmpeg">("all");
+  const [logQuery, setLogQuery] = useState("");
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
@@ -51,11 +54,53 @@ export function useSophisticateController() {
 
   const canConvert = !!fileName && !processing;
 
+  const filteredLogs = useMemo(() => {
+    const q = logQuery.trim().toLowerCase();
+    return logs.filter((line) => {
+      const byFilter =
+        logFilter === "all" ? true :
+        logFilter === "errors" ? line.startsWith("[error]") :
+        logFilter === "ffmpeg" ? line.startsWith("[ffmpeg]") :
+        line.startsWith("[run]") ||
+        line.startsWith("[encode]") ||
+        line.startsWith("[crop]") ||
+        line.startsWith("[size]") ||
+        line.startsWith("[done]") ||
+        line.startsWith("[complete]") ||
+        line.startsWith("[cancelled]");
+      if (!byFilter) return false;
+      if (!q) return true;
+      return line.toLowerCase().includes(q);
+    });
+  }, [logFilter, logQuery, logs]);
+
   const cropAspect = useMemo(() => {
     const preset = ASPECT_PRESETS.find((p) => p.label === activePreset);
     if (!preset || preset.w === 0 || preset.h === 0) return undefined;
     return preset.w / preset.h;
   }, [activePreset]);
+
+  const zoomStep = useMemo(() => {
+    const minSide = Math.min(videoDims.w, videoDims.h);
+    if (minSide >= 2160) return 0.005;
+    if (minSide >= 1080) return 0.01;
+    if (minSide >= 720) return 0.015;
+    return 0.02;
+  }, [videoDims.h, videoDims.w]);
+
+  const setZoom = useCallback((nextZoom: number) => {
+    const clamped = Math.max(1, Math.min(3, nextZoom));
+    const snapped = Math.round(clamped / zoomStep) * zoomStep;
+    setZoomRaw(Number(snapped.toFixed(4)));
+  }, [zoomStep]);
+
+  const getPreviewVideo = useCallback(() => {
+    return cropperVideoRef.current?.current ?? null;
+  }, []);
+
+  const setPreviewVideoRef = useCallback((ref: React.RefObject<HTMLVideoElement>) => {
+    cropperVideoRef.current = ref;
+  }, []);
 
   const addLog = useCallback((line: string) => {
     setLogs((prev) => {
@@ -90,7 +135,7 @@ export function useSophisticateController() {
     (preset: AspectPreset) => {
       setActivePreset(preset.label);
       setUiCrop({ x: 0, y: 0 });
-      setZoom(1);
+      setZoomRaw(1);
       if (videoDims.w <= 0 || videoDims.h <= 0) {
         setCrop({ x: 0, y: 0, w: 1, h: 1 });
         return;
@@ -120,7 +165,12 @@ export function useSophisticateController() {
 
       setCrop({ x: 0, y: 0, w: 1, h: 1 });
       setUiCrop({ x: 0, y: 0 });
-      setZoom(1);
+      setZoomRaw(1);
+      setCurrentTime(0);
+      setIsPreviewPlaying(false);
+      setTrimStart(0);
+      setTrimEnd(0);
+      setShowCirclePreview(true);
     },
     [addLog],
   );
@@ -133,10 +183,13 @@ export function useSophisticateController() {
     setCrop({ x: 0, y: 0, w: 1, h: 1 });
     setVideoDims({ w: 0, h: 0 });
     setShowResult(false);
+    setUiCrop({ x: 0, y: 0 });
+    setZoomRaw(1);
     setCurrentTime(0);
     setIsPreviewPlaying(false);
-    setUiCrop({ x: 0, y: 0 });
-    setZoom(1);
+    setTrimStart(0);
+    setTrimEnd(0);
+    setShowCirclePreview(true);
     fileRef.current = null;
 
     if (fileUrlRef.current) URL.revokeObjectURL(fileUrlRef.current);
@@ -149,10 +202,9 @@ export function useSophisticateController() {
     setResultBlob(null);
   }, []);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      const file = e.dataTransfer.files?.[0];
+  const handleDropFiles = useCallback(
+    (files: File[]) => {
+      const file = files?.[0];
       if (file) setFile(file);
     },
     [setFile],
@@ -188,12 +240,12 @@ export function useSophisticateController() {
     if (!videoEl || !videoEl.videoWidth || !videoEl.videoHeight) return;
 
     setVideoDims({ w: videoEl.videoWidth, h: videoEl.videoHeight });
-    setVideoDuration(videoEl.duration || 0);
+    const duration = videoEl.duration || 0;
+    setVideoDuration(duration);
     setCurrentTime(0);
-    setIsPreviewPlaying(false);
-    setTrimEnd(videoEl.duration || 0);
     setTrimStart(0);
-    addLog(`[meta] ${videoEl.videoWidth}x${videoEl.videoHeight}, ${videoEl.duration.toFixed(1)}s`);
+    setTrimEnd(duration);
+    addLog(`[meta] ${videoEl.videoWidth}x${videoEl.videoHeight}, ${duration.toFixed(1)}s`);
 
     const preset = ASPECT_PRESETS.find((p) => p.label === activePreset) ?? ASPECT_PRESETS[0];
     setCrop(applyPresetCrop(preset, videoEl.videoWidth, videoEl.videoHeight));
@@ -228,11 +280,11 @@ export function useSophisticateController() {
     setShowResult(false);
 
     const px = cropPixels(crop, videoEl.videoWidth, videoEl.videoHeight);
-    setLogs([
-      "[run] start",
-      `[run] max size=${maxSize} MB, format=${format}`,
-      `[run] crop ${px.w}x${px.h}+${px.x}+${px.y} from ${videoEl.videoWidth}x${videoEl.videoHeight}`,
-    ]);
+      setLogs([
+        "[run] start",
+        `[run] max size=${maxSize} MB, format=${format}, audio=${includeAudio ? "on" : "off"}`,
+        `[run] crop ${px.w}x${px.h}+${px.x}+${px.y} from ${videoEl.videoWidth}x${videoEl.videoHeight}`,
+      ]);
 
     if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
     resultUrlRef.current = "";
@@ -251,11 +303,12 @@ export function useSophisticateController() {
         onLog: addLog,
         onProgress: setProgress,
         trimStart: trimStart > 0 ? trimStart : undefined,
-        trimEnd: trimEnd < (videoEl.duration || 0) ? trimEnd : undefined,
+        trimEnd: trimEnd > 0 && trimEnd < (videoEl.duration || 0) ? trimEnd : undefined,
         speed: speed !== 1 ? speed : undefined,
         loop: loopCount > 1 ? loopCount : undefined,
         fps: fps > 0 ? fps : undefined,
         quality,
+        includeAudio,
       });
 
       setResultBlob(blob);
@@ -275,7 +328,7 @@ export function useSophisticateController() {
       setProcessing(false);
       cancelRequestedRef.current = false;
     }
-  }, [addLog, crop, fileName, format, fps, loopCount, maxSize, quality, speed, trimEnd, trimStart]);
+  }, [addLog, crop, fileName, format, fps, includeAudio, loopCount, maxSize, quality, speed, trimEnd, trimStart]);
 
   const stopCurrentProcess = useCallback(async () => {
     if (!processing) return;
@@ -286,37 +339,56 @@ export function useSophisticateController() {
   }, [addLog, processing]);
 
   const seekPreview = useCallback((time: number) => {
-    const clamped = Math.max(0, Math.min(time, videoDuration || 0));
+    const max = Math.max(0, videoDuration || 0);
+    const clamped = Math.max(0, Math.min(time, max));
     setCurrentTime(clamped);
-    if (videoRef.current) {
-      videoRef.current.currentTime = clamped;
-    }
-  }, [videoDuration]);
-
-  const togglePreviewPlayback = useCallback(async () => {
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
-    try {
-      if (videoEl.paused) {
-        if (videoEl.currentTime < trimStart || videoEl.currentTime > trimEnd) {
-          videoEl.currentTime = trimStart;
-          setCurrentTime(trimStart);
-        }
-        await videoEl.play();
-      } else {
-        videoEl.pause();
-      }
-    } catch {}
-  }, [trimEnd, trimStart]);
+    const previewVideo = getPreviewVideo();
+    if (previewVideo) previewVideo.currentTime = clamped;
+  }, [getPreviewVideo, videoDuration]);
 
   const setTrimRange = useCallback((start: number, end: number) => {
-    const minGap = 0.1;
     const max = Math.max(0, videoDuration || 0);
+    const minGap = 0.1;
     const safeStart = Math.max(0, Math.min(start, max));
     const safeEnd = Math.max(safeStart + minGap, Math.min(end, max));
     setTrimStart(safeStart);
     setTrimEnd(safeEnd);
   }, [videoDuration]);
+
+  const resetTrimRange = useCallback(() => {
+    const max = Math.max(0, videoDuration || 0);
+    setTrimStart(0);
+    setTrimEnd(max);
+    seekPreview(0);
+  }, [seekPreview, videoDuration]);
+
+  const togglePreviewPlayback = useCallback(async () => {
+    const previewVideo = getPreviewVideo();
+    if (!previewVideo) return;
+    try {
+      if (previewVideo.paused) {
+        if (previewVideo.currentTime < trimStart || previewVideo.currentTime > trimEnd) {
+          previewVideo.currentTime = trimStart;
+          setCurrentTime(trimStart);
+        }
+        await previewVideo.play();
+      } else {
+        previewVideo.pause();
+      }
+    } catch {}
+  }, [getPreviewVideo, trimEnd, trimStart]);
+
+  const handlePreviewTimeUpdate = useCallback((time: number) => {
+    setCurrentTime(time);
+  }, []);
+
+  const handlePreviewPlay = useCallback(() => {
+    setIsPreviewPlaying(true);
+  }, []);
+
+  const handlePreviewPause = useCallback(() => {
+    setIsPreviewPlaying(false);
+  }, []);
 
   const handleDownload = useCallback(() => {
     if (resultBlob) {
@@ -357,7 +429,7 @@ export function useSophisticateController() {
       if (e.key === "Enter" && canConvert && !isEditableTarget) {
         realProcess();
       }
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !isEditableTarget) {
         clearAll();
       }
     };
@@ -374,67 +446,17 @@ export function useSophisticateController() {
   }, []);
 
   useEffect(() => {
-    if (!showCirclePreview || !fileUrl) return;
-    const videoEl = videoRef.current;
-    const canvas = circleCanvasRef.current;
-    if (!videoEl || !canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let raf = 0;
-    const draw = () => {
-      const size = 120;
-      canvas.width = size;
-      canvas.height = size;
-      ctx.clearRect(0, 0, size, size);
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
-      ctx.clip();
-      const sx = crop.x * videoEl.videoWidth;
-      const sy = crop.y * videoEl.videoHeight;
-      const sw = crop.w * videoEl.videoWidth;
-      const sh = crop.h * videoEl.videoHeight;
-      ctx.drawImage(videoEl, sx, sy, sw, sh, 0, 0, size, size);
-      ctx.restore();
-      raf = requestAnimationFrame(draw);
-    };
-
-    draw();
-    return () => cancelAnimationFrame(raf);
-  }, [crop, fileUrl, showCirclePreview]);
-
-  useEffect(() => {
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
-
-    const onTime = () => {
-      setCurrentTime(videoEl.currentTime || 0);
-    };
-    const onPlay = () => setIsPreviewPlaying(true);
-    const onPause = () => setIsPreviewPlaying(false);
-    const onEnded = () => setIsPreviewPlaying(false);
-
-    videoEl.addEventListener("timeupdate", onTime);
-    videoEl.addEventListener("play", onPlay);
-    videoEl.addEventListener("pause", onPause);
-    videoEl.addEventListener("ended", onEnded);
-    return () => {
-      videoEl.removeEventListener("timeupdate", onTime);
-      videoEl.removeEventListener("play", onPlay);
-      videoEl.removeEventListener("pause", onPause);
-      videoEl.removeEventListener("ended", onEnded);
-    };
-  }, [fileUrl]);
-
-  useEffect(() => {
     if (!isPreviewPlaying) return;
-    if (currentTime <= trimEnd) return;
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
-    videoEl.pause();
-    seekPreview(trimStart);
-  }, [currentTime, isPreviewPlaying, seekPreview, trimEnd, trimStart]);
+    if (trimEnd <= trimStart) return;
+    if (currentTime < trimEnd) return;
+
+    const previewVideo = getPreviewVideo();
+    if (!previewVideo) return;
+
+    previewVideo.pause();
+    previewVideo.currentTime = trimEnd;
+    setCurrentTime(trimEnd);
+  }, [currentTime, getPreviewVideo, isPreviewPlaying, trimEnd, trimStart]);
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -447,16 +469,16 @@ export function useSophisticateController() {
   const cropPx = videoDims.w > 0 ? cropPixels(crop, videoDims.w, videoDims.h) : null;
   const cropLabel = cropPx ? `${cropPx.w}×${cropPx.h} from ${videoDims.w}×${videoDims.h}` : "Load a video first";
 
-  const fmtTime = (s: number) => {
+  const fmtTime = useCallback((seconds: number) => {
+    const s = Math.max(0, seconds || 0);
     const m = Math.floor(s / 60);
-    const sec = (s % 60).toFixed(1);
-    return `${m}:${sec.padStart(4, "0")}`;
-  };
+    const rest = (s % 60).toFixed(1).padStart(4, "0");
+    return `${m}:${rest}`;
+  }, []);
 
   return {
     inputRef,
     videoRef,
-    circleCanvasRef,
     logsEndRef,
     fileUrl,
     fileName,
@@ -466,16 +488,20 @@ export function useSophisticateController() {
     activePreset,
     showResult,
     videoDuration,
+    currentTime,
     trimStart,
     trimEnd,
-    currentTime,
     isPreviewPlaying,
     speed,
     loopCount,
     fps,
     quality,
+    includeAudio,
     showCirclePreview,
     logs,
+    filteredLogs,
+    logFilter,
+    logQuery,
     processing,
     progress,
     resultBlob,
@@ -486,33 +512,42 @@ export function useSophisticateController() {
     cropLabel,
     uiCrop,
     zoom,
+    zoomStep,
     cropAspect,
     setUiCrop,
     setZoom,
+    setTrimStart,
+    setTrimEnd,
     setShowResult,
     clearAll,
-    handleDrop,
+    handleDropFiles,
     handlePick,
     handlePaste,
     handleVideoMetadata,
+    setPreviewVideoRef,
+    handlePreviewTimeUpdate,
+    handlePreviewPlay,
+    handlePreviewPause,
     onCropComplete,
     realProcess,
     stopCurrentProcess,
     handleDownload,
     seekPreview,
     setTrimRange,
+    resetTrimRange,
     togglePreviewPlayback,
     setShowCirclePreview,
+    setLogFilter,
+    setLogQuery,
     setMaxSize,
     setFormat,
     setCrop,
     setActivePreset,
-    setTrimStart,
-    setTrimEnd,
     setSpeed,
     setLoopCount,
     setFps,
     setQuality,
+    setIncludeAudio,
     applyPreset,
     fmtTime,
   };
