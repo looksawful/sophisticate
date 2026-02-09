@@ -151,7 +151,7 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
 
   return (
     <motion.section variants={riseVariants} className={`lg:col-span-8 ${ui.panelStrong} shadow-xl overflow-hidden`}>
-      <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-zinc-800">
+      <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 border-b border-zinc-800">
         <div className="flex items-center gap-3">
           {c.resultUrl && (
             <div className="flex rounded-lg overflow-hidden border border-zinc-700">
@@ -175,7 +175,7 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
       </div>
 
       <div className="relative bg-zinc-950/55">
-        <div className="h-[72vh] min-h-[500px] max-h-[860px] px-5 sm:px-6 pt-5 pb-4">
+        <div className="h-[clamp(280px,48dvh,620px)] min-h-[280px] max-h-[620px] px-4 sm:px-5 pt-3 pb-2">
           <div
             {...getRootProps()}
             ref={cropShellRef}
@@ -337,23 +337,23 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
         </div>
 
         {c.fileUrl && !c.showResult && c.videoDuration > 0 && (
-          <div className="px-5 sm:px-6 pb-5">
-            <div className="rounded-2xl border border-zinc-700/80 bg-zinc-950/80 backdrop-blur-xl shadow-lg p-4 sm:p-5">
+          <div className="px-4 sm:px-5 pb-3">
+            <div className="rounded-2xl border border-zinc-700/80 bg-zinc-950/80 backdrop-blur-xl shadow-lg p-3 sm:p-4">
               <div className="flex items-center gap-3 sm:gap-4">
                 <Button
                   type="button"
                   onClick={c.togglePreviewPlayback}
                   disabled={c.processing}
-                  className="h-14 sm:h-16 min-w-[84px] sm:min-w-[96px] px-3 text-base font-semibold flex items-center justify-center"
+                  className="h-12 sm:h-14 min-w-[76px] sm:min-w-[88px] px-3 text-base font-semibold flex items-center justify-center"
                   aria-label={c.isPreviewPlaying ? "Pause preview" : "Play preview"}
                 >
-                  {c.isPreviewPlaying ? <Pause size={30} /> : <Play size={30} />}
+                  {c.isPreviewPlaying ? <Pause size={26} /> : <Play size={26} />}
                 </Button>
 
                 <div className="min-w-0 flex-1 flex items-center">
                   <div
                     ref={timelineRef}
-                    className="relative h-14 sm:h-16 w-full rounded-xl border border-zinc-700/70 bg-black/30 px-3"
+                    className="relative h-12 sm:h-14 w-full rounded-xl border border-zinc-700/70 bg-black/30 px-3"
                     onPointerDown={handleTimelinePointerDown}
                   >
                     <div className="pointer-events-none absolute left-3 right-3 top-1/2 h-2 -translate-y-1/2 rounded-full bg-zinc-800/80" />
@@ -383,12 +383,12 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
                         onPointerDown={handlePlayheadDown}
                       />
                       <div
-                        className="absolute top-1/2 z-30 h-11 w-[3px] -translate-x-1/2 -translate-y-1/2 bg-zinc-500/90 pointer-events-auto cursor-ew-resize"
+                        className="absolute top-1/2 z-30 h-9 w-[3px] -translate-x-1/2 -translate-y-1/2 bg-zinc-500/90 pointer-events-auto cursor-ew-resize"
                         style={{ left: `${trimStartPercent}%` }}
                         onPointerDown={handleStartHandleDown}
                       />
                       <div
-                        className="absolute top-1/2 z-30 h-11 w-[3px] -translate-x-1/2 -translate-y-1/2 bg-zinc-500/90 pointer-events-auto cursor-ew-resize"
+                        className="absolute top-1/2 z-30 h-9 w-[3px] -translate-x-1/2 -translate-y-1/2 bg-zinc-500/90 pointer-events-auto cursor-ew-resize"
                         style={{ left: `${trimEndPercent}%` }}
                         onPointerDown={handleEndHandleDown}
                       />
@@ -412,8 +412,8 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
           </div>
         )}
 
-        <div className="px-5 sm:px-6 pb-5">
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="px-4 sm:px-5 pb-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Tooltip
               text={
                 c.canConvert

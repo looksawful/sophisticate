@@ -11,8 +11,8 @@ import type { SophisticateController } from "./useSophisticateController";
 export function SidebarControls({ c }: { c: SophisticateController }) {
   return (
     <motion.aside variants={riseVariants} className={`lg:col-span-4 ${ui.panelStrong} bg-zinc-950/95 shadow-xl`}>
-      <div className="h-full p-5 sm:p-6 grid gap-6">
-        <section className="rounded-xl border border-zinc-800/90 p-4 grid gap-3.5">
+      <div className="h-full p-4 sm:p-5 grid gap-4">
+        <section className="rounded-xl border border-zinc-800/90 p-3.5 grid gap-3">
           <FieldLabel className="text-base">Aspect ratio</FieldLabel>
           <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
             {ASPECT_PRESETS.map((preset) => (
@@ -31,7 +31,7 @@ export function SidebarControls({ c }: { c: SophisticateController }) {
           </div>
         </section>
 
-        <section className="rounded-xl border border-zinc-800/90 p-4 grid gap-3.5">
+        <section className="rounded-xl border border-zinc-800/90 p-3.5 grid gap-3">
           <div className="flex items-center justify-between">
             <FieldLabel className="text-base">Crop & zoom</FieldLabel>
             <div className="text-sm text-zinc-300 font-mono">{c.zoom.toFixed(2)}x</div>
@@ -62,7 +62,7 @@ export function SidebarControls({ c }: { c: SophisticateController }) {
         </section>
 
         <section className="rounded-xl border border-zinc-800/90 overflow-hidden flex flex-col">
-          <div className="p-4 grid gap-3.5">
+          <div className="p-3.5 grid gap-3">
             <Tooltip text="Target output file size" position="top">
               <div className="grid gap-2.5">
                 <FieldLabel className="text-base">Max size (MB)</FieldLabel>
@@ -97,10 +97,10 @@ export function SidebarControls({ c }: { c: SophisticateController }) {
           </div>
 
           <details className="mt-auto">
-            <summary className="px-4 py-3 cursor-pointer select-none text-sm font-semibold text-zinc-300 hover:text-zinc-100 transition">
+            <summary className="px-3.5 py-2.5 cursor-pointer select-none text-sm font-semibold text-zinc-300 hover:text-zinc-100 transition">
               Advanced settings
             </summary>
-            <div className="px-4 pb-4 grid gap-4 pt-1">
+            <div className="px-3.5 pb-3.5 grid gap-3 pt-1">
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
                   <FieldLabel>Loop</FieldLabel>

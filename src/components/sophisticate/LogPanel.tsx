@@ -19,7 +19,7 @@ const getLogLineClass = (line: string) => {
 
 export function LogPanel({ c }: { c: SophisticateController }) {
   return (
-    <details className={`mt-4 ${ui.panelStrong}`}>
+    <details className={`mt-2 ${ui.panelStrong}`}>
       <summary className="px-4 py-2.5 cursor-pointer select-none flex items-center justify-between text-xs text-zinc-300 hover:text-zinc-100 transition">
         <span>Log</span>
         <span className="text-xs text-zinc-400">{c.filteredLogs.length} / {c.logs.length}</span>

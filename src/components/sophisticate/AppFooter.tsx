@@ -8,7 +8,7 @@ export function AppFooter() {
   return (
     <motion.footer
       variants={fadeVariants}
-      className="mt-6 sm:mt-8 pt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm text-zinc-300"
+      className="mt-3 sm:mt-4 pt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-sm text-zinc-300"
     >
       <div className="flex flex-wrap items-center gap-3">
         <span className="flex items-center gap-1">

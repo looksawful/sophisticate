@@ -20,10 +20,10 @@ export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
       initial="initial"
       animate="animate"
     >
-      <div className="mx-auto max-w-[1500px] px-5 sm:px-7 py-7 sm:py-9 min-h-screen flex flex-col">
+      <div className="mx-auto max-w-[1500px] px-5 sm:px-7 py-5 sm:py-6 min-h-screen flex flex-col">
         <input ref={c.inputRef} type="file" accept="video/*" onChange={c.handlePick} className="hidden" />
 
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col">
           <motion.div variants={fadeVariants} className="flex items-center justify-end gap-4 mb-4">
             <div className="text-base text-zinc-300">
               {c.processing ? `Processing ${Math.round(c.progress * 100)}%` : c.fileBadge}
@@ -34,7 +34,7 @@ export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
             <motion.div
               initial={prefersReducedMotion ? false : { opacity: 0, scaleX: 0 }}
               animate={prefersReducedMotion ? false : { opacity: 1, scaleX: 1 }}
-              className="mb-5 h-2 rounded-full bg-zinc-800 overflow-hidden origin-left"
+              className="mb-3 h-2 rounded-full bg-zinc-800 overflow-hidden origin-left"
             >
               <motion.div
                 className="h-full bg-gradient-to-r from-pink-600 to-pink-400 rounded-full"
@@ -45,7 +45,7 @@ export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
             </motion.div>
           )}
 
-          <div className="grid gap-5 lg:gap-6 lg:grid-cols-12">
+          <div className="grid gap-4 lg:gap-5 lg:grid-cols-12">
             <PreviewPane c={c} />
             <SidebarControls c={c} />
           </div>
