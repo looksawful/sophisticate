@@ -13,7 +13,7 @@ import type { SophisticateController } from "./useSophisticateController";
 export const SidebarControls = memo(function SidebarControls({ c }: { c: SophisticateController }) {
   return (
     <motion.aside variants={riseVariants} className={`lg:col-span-4 ${ui.panelStrong} bg-zinc-950/95 shadow-xl`}>
-      <div className="h-full p-4 sm:p-5 grid gap-4">
+      <div className="h-full p-4 sm:p-5 grid gap-4 overflow-y-auto max-h-[calc(100dvh-100px)]">
         <section className="rounded-xl border border-zinc-800/90 p-3.5 grid gap-3">
           <div className="flex items-center justify-between">
             <FieldLabel className="text-base">Aspect ratio</FieldLabel>
@@ -157,7 +157,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                   <Button
                     key={format}
                     onClick={() => c.setFormat(format)}
-                    disabled={c.processing}
+                    disabled={!c.fileUrl || c.processing}
                     variant={c.format === format ? "chipActive" : "chip"}
                     size="sm"
                     className="py-3 font-semibold"
@@ -181,7 +181,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                     <Button
                       key={q}
                       onClick={() => c.setQuality(q)}
-                      disabled={c.processing}
+                      disabled={!c.fileUrl || c.processing}
                       variant={c.quality === q ? "chipActive" : "chip"}
                       size="sm"
                       className="font-semibold capitalize"
@@ -200,11 +200,29 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
               </div>
 
               <div className="grid gap-2">
+                <FieldLabel>Speed</FieldLabel>
+                <div className="flex gap-2 flex-wrap">
+                  {[0.5, 1, 1.5, 2].map((s) => (
+                    <Button
+                      key={s}
+                      onClick={() => c.setSpeed(s)}
+                      disabled={!c.fileUrl || c.processing}
+                      variant={c.speed === s ? "chipActive" : "chip"}
+                      size="sm"
+                      className="font-semibold"
+                    >
+                      {s}x
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-2">
                 <FieldLabel>FPS</FieldLabel>
                 <div className="flex gap-2 flex-wrap">
                   <Button
                     onClick={() => c.setFps(0)}
-                    disabled={c.processing}
+                    disabled={!c.fileUrl || c.processing}
                     variant={c.fps === 0 ? "chipActive" : "chip"}
                     size="sm"
                     className="font-semibold"
@@ -215,7 +233,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                     <Button
                       key={f}
                       onClick={() => c.setFps(f)}
-                      disabled={c.processing}
+                      disabled={!c.fileUrl || c.processing}
                       variant={c.fps === f ? "chipActive" : "chip"}
                       size="sm"
                       className="font-semibold"

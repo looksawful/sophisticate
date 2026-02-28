@@ -49,12 +49,8 @@ export const ProcessingOverlay = memo(function ProcessingOverlay({
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-pink-500" />
               </motion.div>
             )}
-            {pct >= 100 && (
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
-            )}
-            <span className={`text-sm font-semibold ${stage.color} transition-colors duration-300`}>
-              {stage.label}
-            </span>
+            {pct >= 100 && <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />}
+            <span className={`text-sm font-semibold ${stage.color} transition-colors duration-300`}>{stage.label}</span>
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-2xl font-bold tabular-nums text-zinc-100">{pct}</span>

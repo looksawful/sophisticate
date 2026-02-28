@@ -2,8 +2,8 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
-import { containerVariants, fadeVariants } from "./config";
 import { AppFooter } from "./AppFooter";
+import { containerVariants, fadeVariants } from "./config";
 import { LogPanel } from "./LogPanel";
 import { PreviewPane } from "./PreviewPane";
 import { ProcessingOverlay } from "./ProcessingOverlay";
@@ -27,7 +27,7 @@ export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
         <div className="flex-1 flex flex-col">
           <motion.div variants={fadeVariants} className="flex items-center justify-end gap-4 mb-4">
             <div className="text-base text-zinc-300">
-              {c.processing ? `Processing ${Math.round(c.progress * 100)}%` : c.fileBadge}
+              {c.fileBadge}
             </div>
           </motion.div>
 

@@ -73,9 +73,9 @@ export const LogPanel = memo(function LogPanel({ c }: { c: SophisticateControlle
               Show {hiddenCount} older entries…
             </button>
           )}
-          {visibleLogs.map((line, i) => (
-            <div key={i} className={`mb-1 rounded-md border px-2 py-1 ${getLogLineClass(line)}`}>
-              {line}
+          {visibleLogs.map((entry) => (
+            <div key={entry.id} className={`mb-1 rounded-md border px-2 py-1 ${getLogLineClass(entry.text)}`}>
+              {entry.text}
             </div>
           ))}
           <div ref={c.logsEndRef} />

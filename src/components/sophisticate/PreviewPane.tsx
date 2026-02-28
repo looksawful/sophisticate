@@ -281,8 +281,17 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                     }}
                   />
 
+                  {c.videoDuration === 0 && (
+                    <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-2xl">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-pink-500 border-t-transparent" />
+                        <span className="text-sm text-zinc-300 font-medium">Loading video…</span>
+                      </div>
+                    </div>
+                  )}
+
                   {c.cropPx && (
-                    <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/80 border border-zinc-700 text-xs text-zinc-200 whitespace-nowrap">
+                    <div className="absolute bottom-3 left-3 px-2 py-1 rounded bg-black/80 border border-zinc-700 text-xs text-zinc-200 whitespace-nowrap z-10">
                       {c.cropPx.w}x{c.cropPx.h}
                     </div>
                   )}
@@ -410,12 +419,12 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                         onPointerDown={handlePlayheadDown}
                       />
                       <div
-                        className="absolute top-1/2 z-30 h-9 w-[3px] -translate-x-1/2 -translate-y-1/2 bg-zinc-500/90 pointer-events-auto cursor-ew-resize"
+                        className="absolute top-1/2 z-30 h-9 w-2 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-zinc-400/90 hover:bg-pink-400 hover:scale-110 transition pointer-events-auto cursor-ew-resize"
                         style={{ left: `${trimStartPercent}%` }}
                         onPointerDown={handleStartHandleDown}
                       />
                       <div
-                        className="absolute top-1/2 z-30 h-9 w-[3px] -translate-x-1/2 -translate-y-1/2 bg-zinc-500/90 pointer-events-auto cursor-ew-resize"
+                        className="absolute top-1/2 z-30 h-9 w-2 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-zinc-400/90 hover:bg-pink-400 hover:scale-110 transition pointer-events-auto cursor-ew-resize"
                         style={{ left: `${trimEndPercent}%` }}
                         onPointerDown={handleEndHandleDown}
                       />
@@ -489,7 +498,7 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                     : "rounded-2xl bg-zinc-800 px-6 py-4 text-zinc-500 cursor-not-allowed"
                 }`}
               >
-                {c.processing ? `Processing ${Math.round(c.progress * 100)}%` : "Convert"}
+                {c.processing ? "Processing\u2026" : "Convert"}
               </motion.button>
             </Tooltip>
 

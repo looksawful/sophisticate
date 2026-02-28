@@ -13,16 +13,28 @@ export const AppFooter = memo(function AppFooter() {
     >
       <div className="flex flex-wrap items-center gap-3">
         <span className="flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-800/50 text-pink-200/90 text-xs font-semibold shadow-sm">Ctrl+V</kbd> paste
+          <kbd className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-800/50 text-pink-200/90 text-xs font-semibold shadow-sm">
+            Ctrl+V
+          </kbd>{" "}
+          paste
         </span>
         <span className="flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-800/50 text-pink-200/90 text-xs font-semibold shadow-sm">Ctrl+O</kbd> open
+          <kbd className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-800/50 text-pink-200/90 text-xs font-semibold shadow-sm">
+            Ctrl+O
+          </kbd>{" "}
+          open
         </span>
         <span className="flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-800/50 text-pink-200/90 text-xs font-semibold shadow-sm">Enter</kbd> run
+          <kbd className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-800/50 text-pink-200/90 text-xs font-semibold shadow-sm">
+            Enter
+          </kbd>{" "}
+          run
         </span>
         <span className="flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-800/50 text-pink-200/90 text-xs font-semibold shadow-sm">Esc</kbd> clear
+          <kbd className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-800/50 text-pink-200/90 text-xs font-semibold shadow-sm">
+            Esc
+          </kbd>{" "}
+          clear
         </span>
       </div>
 

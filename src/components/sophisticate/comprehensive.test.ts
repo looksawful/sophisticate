@@ -1,17 +1,17 @@
 /**
  * Comprehensive tests for sophisticate config, ui tokens, and memoHelpers.
  */
-import { describe, expect, it } from "vitest";
 import { cropPixels, normalizeCrop } from "@/lib/videoUtils";
+import { describe, expect, it } from "vitest";
 import {
   ASPECT_PRESETS,
-  RATIO_PRESETS,
-  SPECIAL_PRESETS,
-  type AspectPreset,
   containerVariants,
   fadeVariants,
   hoverLift,
+  RATIO_PRESETS,
   riseVariants,
+  SPECIAL_PRESETS,
+  type AspectPreset,
 } from "./config";
 import { controllerEqual } from "./memoHelpers";
 import { ui } from "./ui";
@@ -135,7 +135,7 @@ describe("ui tokens — comprehensive", () => {
   for (const key of allKeys) {
     it(`ui.${key} is a non-empty string`, () => {
       expect(typeof (ui as Record<string, unknown>)[key]).toBe("string");
-      expect(((ui as Record<string, string>)[key]).length).toBeGreaterThan(0);
+      expect((ui as Record<string, string>)[key].length).toBeGreaterThan(0);
     });
   }
 

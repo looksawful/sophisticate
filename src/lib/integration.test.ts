@@ -104,17 +104,28 @@ describe("processVideo parameter construction with real files", () => {
     const ceilingBitrate = targetBitrate(maxSizeMB * overhead, trimmedDuration, 128);
 
     const args = [
-      "-i", "input.mp4",
-      "-vf", vf,
-      "-c:v", "libx264",
-      "-preset", "ultrafast",
-      "-crf", String(crf),
-      "-maxrate", `${ceilingBitrate}k`,
-      "-bufsize", `${ceilingBitrate * 2}k`,
-      "-c:a", "aac",
-      "-b:a", "128k",
-      "-movflags", "+faststart",
-      "-y", "output.mp4",
+      "-i",
+      "input.mp4",
+      "-vf",
+      vf,
+      "-c:v",
+      "libx264",
+      "-preset",
+      "ultrafast",
+      "-crf",
+      String(crf),
+      "-maxrate",
+      `${ceilingBitrate}k`,
+      "-bufsize",
+      `${ceilingBitrate * 2}k`,
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      "-movflags",
+      "+faststart",
+      "-y",
+      "output.mp4",
     ];
 
     expect(args).toContain("-c:v");
@@ -134,14 +145,22 @@ describe("processVideo parameter construction with real files", () => {
     const ceilingBitrate = targetBitrate(maxSizeMB * 0.92, duration, 128);
 
     const args = [
-      "-i", "input.mp4",
-      "-vf", vf,
-      "-c:v", "libvpx",
-      "-crf", "24",
-      "-b:v", `${ceilingBitrate}k`,
-      "-c:a", "libvorbis",
-      "-b:a", "128k",
-      "-y", "output.webm",
+      "-i",
+      "input.mp4",
+      "-vf",
+      vf,
+      "-c:v",
+      "libvpx",
+      "-crf",
+      "24",
+      "-b:v",
+      `${ceilingBitrate}k`,
+      "-c:a",
+      "libvorbis",
+      "-b:a",
+      "128k",
+      "-y",
+      "output.webm",
     ];
 
     expect(args).toContain("libvpx");
@@ -152,14 +171,21 @@ describe("processVideo parameter construction with real files", () => {
   // No-audio argument variant
   it("adds -an when audio is disabled", () => {
     const args = [
-      "-i", "input.mp4",
-      "-vf", "crop=320:240:0:0",
-      "-c:v", "libx264",
-      "-preset", "ultrafast",
-      "-crf", "26",
+      "-i",
+      "input.mp4",
+      "-vf",
+      "crop=320:240:0:0",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "ultrafast",
+      "-crf",
+      "26",
       "-an",
-      "-movflags", "+faststart",
-      "-y", "output.mp4",
+      "-movflags",
+      "+faststart",
+      "-y",
+      "output.mp4",
     ];
     expect(args).toContain("-an");
     expect(args).not.toContain("-c:a");

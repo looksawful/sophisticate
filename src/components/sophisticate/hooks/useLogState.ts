@@ -1,26 +1,34 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+
+export type LogEntry = { id: number; text: string };
 
 export function useLogState() {
-  const [logs, setLogs] = useState<string[]>(["Ready"]);
+  const [entries, setEntries] = useState<LogEntry[]>([{ id: 0, text: "Ready" }]);
+  const nextIdRef = useRef(1);
   const [logFilter, setLogFilter] = useState<"all" | "process" | "errors" | "ffmpeg">("all");
   const [logQuery, setLogQuery] = useState("");
 
   const addLog = useCallback((line: string) => {
-    setLogs((prev) => {
+    setEntries((prev) => {
       const next = prev.length > 900 ? prev.slice(prev.length - 650) : prev;
-      return [...next, line];
+      return [...next, { id: nextIdRef.current++, text: line }];
     });
   }, []);
 
+  const setLogs = useCallback((lines: string[]) => {
+    setEntries(lines.map((text) => ({ id: nextIdRef.current++, text })));
+  }, []);
+
   const resetLogs = useCallback(() => {
-    setLogs(["Ready"]);
+    setEntries([{ id: nextIdRef.current++, text: "Ready" }]);
   }, []);
 
   const filteredLogs = useMemo(() => {
     const q = logQuery.trim().toLowerCase();
-    return logs.filter((line) => {
+    return entries.filter((entry) => {
+      const line = entry.text;
       const byFilter =
         logFilter === "all"
           ? true
@@ -39,10 +47,10 @@ export function useLogState() {
       if (!q) return true;
       return line.toLowerCase().includes(q);
     });
-  }, [logFilter, logQuery, logs]);
+  }, [logFilter, logQuery, entries]);
 
   return {
-    logs,
+    logs: entries,
     setLogs,
     filteredLogs,
     logFilter,

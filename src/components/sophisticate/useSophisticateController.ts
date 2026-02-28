@@ -282,30 +282,17 @@ export function useSophisticateController() {
   }, [logState.addLog, processing]);
 
   const handleDownload = useCallback(() => {
-    if (resultBlob) {
-      const href = resultUrlRef.current || URL.createObjectURL(resultBlob);
-      const ext = format === "WEBM" ? ".webm" : ".mp4";
-      const base = fileName.replace(/\.[^.]+$/, "") || "video";
-      const link = document.createElement("a");
-      link.href = href;
-      link.download = `${base}_sophisticate${ext}`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      return;
-    }
-
-    const file = fileRef.current;
-    if (!file) return;
-    const href = fileUrl || URL.createObjectURL(file);
+    if (!resultBlob) return;
+    const href = resultUrlRef.current || URL.createObjectURL(resultBlob);
+    const ext = format === "WEBM" ? ".webm" : ".mp4";
+    const base = fileName.replace(/\.[^.]+$/, "") || "video";
     const link = document.createElement("a");
     link.href = href;
-    link.download = fileName || "video";
+    link.download = `${base}_sophisticate${ext}`;
     document.body.appendChild(link);
     link.click();
     link.remove();
-    if (!fileUrl) URL.revokeObjectURL(href);
-  }, [fileName, fileUrl, format, resultBlob]);
+  }, [fileName, format, resultBlob]);
 
   // --- Keyboard shortcuts ---
   useEffect(() => {
