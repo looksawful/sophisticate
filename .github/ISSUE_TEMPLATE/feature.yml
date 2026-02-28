@@ -1,0 +1,58 @@
+name: Feature request
+description: New functionality or capability
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What is the high-level objective?
+      placeholder: "Let users process multiple videos in a queue with common settings"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Detailed explanation of the feature
+      placeholder: |
+        Users should be able to:
+        - Upload multiple video files
+        - Edit each one individually
+        - Apply shared crop/size parameters to all
+        - Merge them into a single output
+      validations:
+        required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: How do we know the feature is complete and working?
+      placeholder: |
+        - Multiple files can be uploaded
+        - Queue supports drag-and-drop reordering
+        - Each clip can be edited separately
+        - Global settings apply to all clips
+        - Output merges videos correctly
+        - Queue persists during session
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "priority:low (future iteration)"
+        - "priority:medium (planned)"
+        - "priority:high (core feature)"
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes & considerations (optional)
+      placeholder: |
+        - UX design considerations
+        - Potential conflicts with existing features
+        - Performance implications
+        - Similar features in other tools

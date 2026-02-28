@@ -11,5 +11,6 @@ pnpm-debug.log*
 .DS_Store
 .history
 *.tsbuildinfo
+test-fixtures/
 
 src/components/archive/

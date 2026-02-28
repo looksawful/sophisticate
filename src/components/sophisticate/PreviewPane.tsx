@@ -1,21 +1,21 @@
 "use client";
 
 import { prettyBytes } from "@/lib/videoUtils";
-import { MediaCommunitySkin, MediaOutlet, MediaPlayer } from "@vidstack/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Circle, Download, Pause, Play, Square, Upload } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Circle, Download, Pause, Play, Repeat, Square, Upload, Volume2, VolumeX } from "lucide-react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useDropzone } from "react-dropzone";
 import Cropper from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
-import { useDropzone } from "react-dropzone";
 
-import { Button, getButtonClass } from "./controls";
 import { hoverLift, riseVariants } from "./config";
+import { Button, getButtonClass } from "./controls";
+import { controllerEqual } from "./memoHelpers";
 import { Tooltip } from "./Tooltip";
 import { ui } from "./ui";
 import type { SophisticateController } from "./useSophisticateController";
 
-export function PreviewPane({ c }: { c: SophisticateController }) {
+export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateController }) {
   const prefersReducedMotion = useReducedMotion();
   const cropShellRef = useRef<HTMLDivElement | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
@@ -131,6 +131,12 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
 
       const rootRect = root.getBoundingClientRect();
       const areaRect = cropArea.getBoundingClientRect();
+
+      if (areaRect.width < 1 || areaRect.height < 1) {
+        setCircleFrame(null);
+        return;
+      }
+
       const size = Math.min(areaRect.width, areaRect.height);
       const left = areaRect.left - rootRect.left + (areaRect.width - size) / 2;
       const top = areaRect.top - rootRect.top + (areaRect.height - size) / 2;
@@ -139,15 +145,16 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
     };
 
     updateCircleFrame();
+
+    // ResizeObserver alone is sufficient: crop-position changes are
+    // already covered by the effect deps (uiCrop, zoom, crop, preset).
     const observer = new ResizeObserver(updateCircleFrame);
     observer.observe(root);
-    window.addEventListener("resize", updateCircleFrame);
 
     return () => {
       observer.disconnect();
-      window.removeEventListener("resize", updateCircleFrame);
     };
-  }, [c.fileUrl, c.showCirclePreview, c.cropAspect, c.zoom]);
+  }, [c.fileUrl, c.showCirclePreview, c.cropAspect, c.zoom, c.uiCrop, c.crop, c.activePreset]);
 
   return (
     <motion.section variants={riseVariants} className={`lg:col-span-8 ${ui.panelStrong} shadow-xl overflow-hidden`}>
@@ -157,13 +164,21 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
             <div className="flex rounded-lg overflow-hidden border border-zinc-700">
               <button
                 onClick={() => c.setShowResult(false)}
-                className={getButtonClass(!c.showResult ? "chipActive" : "chip", "md", "rounded-none border-none font-medium")}
+                className={getButtonClass(
+                  !c.showResult ? "chipActive" : "chip",
+                  "md",
+                  "rounded-none border-none font-medium",
+                )}
               >
                 Source
               </button>
               <button
                 onClick={() => c.setShowResult(true)}
-                className={getButtonClass(c.showResult ? "chipActive" : "chip", "md", "rounded-none border-none font-medium")}
+                className={getButtonClass(
+                  c.showResult ? "chipActive" : "chip",
+                  "md",
+                  "rounded-none border-none font-medium",
+                )}
               >
                 Result
               </button>
@@ -199,27 +214,31 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
                   className="absolute inset-0"
                 >
                   <div className="result-player-shell h-full w-full">
-                    <MediaPlayer
-                      className="h-full w-full"
+                    <video
+                      className="h-full w-full rounded-xl"
                       src={c.resultUrl}
-                      streamType="on-demand"
-                      viewType="video"
+                      controls
+                      playsInline
+                      crossOrigin="anonymous"
                       title={c.fileName || "Result preview"}
-                      crossorigin="anonymous"
-                      playsinline
-                    >
-                      <MediaOutlet />
-                      <MediaCommunitySkin />
-                    </MediaPlayer>
+                    />
                   </div>
                   <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
                     <Tooltip text="Choose another file (Ctrl+O)" position="bottom">
-                      <Button onClick={() => c.inputRef.current?.click()} disabled={c.processing} className="font-medium backdrop-blur-sm bg-black/45 border-zinc-600 text-sm px-3.5 py-2">
+                      <Button
+                        onClick={() => c.inputRef.current?.click()}
+                        disabled={c.processing}
+                        className="font-medium backdrop-blur-sm bg-black/45 border-zinc-600 text-sm px-3.5 py-2"
+                      >
                         Replace file
                       </Button>
                     </Tooltip>
                     <Tooltip text="Remove the loaded file (Esc)" position="bottom">
-                      <Button onClick={c.clearAll} disabled={c.processing} className="font-medium backdrop-blur-sm bg-black/45 border-zinc-600 text-sm px-3.5 py-2">
+                      <Button
+                        onClick={c.clearAll}
+                        disabled={c.processing}
+                        className="font-medium backdrop-blur-sm bg-black/45 border-zinc-600 text-sm px-3.5 py-2"
+                      >
                         Clear file
                       </Button>
                     </Tooltip>
@@ -249,25 +268,19 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
                     onCropComplete={c.onCropComplete}
                     onZoomChange={c.setZoom}
                     setVideoRef={c.setPreviewVideoRef}
+                    onMediaLoaded={(mediaSize) => c.handleVideoMetadata(mediaSize)}
                     mediaProps={{
                       muted: true,
                       playsInline: true,
-                      loop: false,
+                      loop: c.loopEnabled,
                       preload: "auto",
-                      onTimeUpdate: (e) => c.handlePreviewTimeUpdate((e.currentTarget as HTMLVideoElement).currentTime || 0),
+                      onTimeUpdate: (e) =>
+                        c.handlePreviewTimeUpdate((e.currentTarget as HTMLVideoElement).currentTime || 0),
                       onPlay: () => c.handlePreviewPlay(),
                       onPause: () => c.handlePreviewPause(),
                     }}
                   />
-                  <video
-                    ref={c.videoRef}
-                    src={c.fileUrl}
-                    className="hidden"
-                    preload="auto"
-                    muted
-                    playsInline
-                    onLoadedMetadata={c.handleVideoMetadata}
-                  />
+
                   {c.cropPx && (
                     <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/80 border border-zinc-700 text-xs text-zinc-200 whitespace-nowrap">
                       {c.cropPx.w}x{c.cropPx.h}
@@ -293,12 +306,20 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
                   </div>
                   <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
                     <Tooltip text="Choose another file (Ctrl+O)" position="top">
-                      <Button onClick={() => c.inputRef.current?.click()} disabled={c.processing} className="font-medium backdrop-blur-sm bg-black/45 border-zinc-600">
+                      <Button
+                        onClick={() => c.inputRef.current?.click()}
+                        disabled={c.processing}
+                        className="font-medium backdrop-blur-sm bg-black/45 border-zinc-600"
+                      >
                         Replace file
                       </Button>
                     </Tooltip>
                     <Tooltip text="Remove the loaded file (Esc)" position="top">
-                      <Button onClick={c.clearAll} disabled={c.processing} className="font-medium backdrop-blur-sm bg-black/45 border-zinc-600">
+                      <Button
+                        onClick={c.clearAll}
+                        disabled={c.processing}
+                        className="font-medium backdrop-blur-sm bg-black/45 border-zinc-600"
+                      >
                         Clear file
                       </Button>
                     </Tooltip>
@@ -306,26 +327,29 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
                   <button
                     type="button"
                     onClick={() => c.setShowCirclePreview((v) => !v)}
-                    className={`absolute top-3 right-3 z-20 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold bg-transparent transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/60 ${
-                      c.showCirclePreview ? "text-pink-300" : "text-zinc-300 hover:text-zinc-100"
+                    className={`absolute top-3 right-3 z-20 inline-flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/60 ${
+                      c.showCirclePreview
+                        ? "bg-pink-500/15 text-pink-300 border border-pink-500/40"
+                        : "bg-zinc-800/80 text-zinc-400 border border-zinc-700 hover:text-zinc-100"
                     }`}
                     aria-pressed={c.showCirclePreview}
                   >
-                    {c.showCirclePreview ? <Circle size={14} /> : <Square size={14} />}
-                    <span>Preview mode: {c.showCirclePreview ? "Circle" : "Default"}</span>
+                    {c.showCirclePreview ? <Circle size={12} /> : <Square size={12} />}
+                    <span>Circle {c.showCirclePreview ? "ON" : "OFF"}</span>
                   </button>
                 </motion.div>
               ) : (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="absolute inset-0"
-                >
+                <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0">
                   <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
                     <div className="text-lg text-zinc-50">{dropHint}</div>
                     <div className="text-sm text-zinc-300">or choose file / paste</div>
-                    <Button type="button" onClick={open} variant="primary" size="md" className="inline-flex items-center justify-center px-5 py-3 text-base font-semibold">
+                    <Button
+                      type="button"
+                      onClick={open}
+                      variant="primary"
+                      size="md"
+                      className="inline-flex items-center justify-center px-5 py-3 text-base font-semibold"
+                    >
                       <Upload size={16} className="mr-2" />
                       Choose file
                     </Button>
@@ -364,7 +388,10 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
                       />
                       <div
                         className="absolute top-1/2 h-2 -translate-y-1/2 rounded-full bg-zinc-200/60"
-                        style={{ left: `${trimStartPercent}%`, width: `${Math.max(0, trimEndPercent - trimStartPercent)}%` }}
+                        style={{
+                          left: `${trimStartPercent}%`,
+                          width: `${Math.max(0, trimEndPercent - trimStartPercent)}%`,
+                        }}
                       />
                       <div
                         className="absolute top-1/2 h-2 -translate-y-1/2 rounded-full bg-fuchsia-500/85 shadow-[0_0_8px_rgba(217,70,239,0.45)]"
@@ -405,8 +432,37 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
                       aria-label="Preview position"
                     />
                   </div>
-
                 </div>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => c.setLoopEnabled((v) => !v)}
+                  disabled={c.processing}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/60 ${
+                    c.loopEnabled
+                      ? "bg-pink-500/15 text-pink-300 border border-pink-500/40"
+                      : "bg-zinc-800/80 text-zinc-400 border border-zinc-700 hover:text-zinc-100"
+                  }`}
+                  aria-pressed={c.loopEnabled}
+                >
+                  <Repeat size={12} />
+                  <span>Loop {c.loopEnabled ? "ON" : "OFF"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => c.setIncludeAudio((v) => !v)}
+                  disabled={c.processing}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/60 ${
+                    c.includeAudio
+                      ? "bg-pink-500/15 text-pink-300 border border-pink-500/40"
+                      : "bg-zinc-800/80 text-zinc-400 border border-zinc-700 hover:text-zinc-100"
+                  }`}
+                  aria-pressed={c.includeAudio}
+                >
+                  {c.includeAudio ? <Volume2 size={12} /> : <VolumeX size={12} />}
+                  <span>Audio {c.includeAudio ? "ON" : "OFF"}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -470,4 +526,4 @@ export function PreviewPane({ c }: { c: SophisticateController }) {
       </div>
     </motion.section>
   );
-}
+}, controllerEqual);

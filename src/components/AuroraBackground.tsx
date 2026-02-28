@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
+import { auroraSignal } from "./auroraSignal";
+
 const vertexSource = `
 attribute vec2 aPosition;
 void main() {
@@ -148,6 +150,7 @@ export default function AuroraBackground() {
 
     const render = (now: number) => {
       rafId = window.requestAnimationFrame(render);
+      if (auroraSignal.paused) return;
       if (now - lastFrame < frameInterval) return;
       const delta = now - lastFrame;
       lastFrame = now;
@@ -169,11 +172,5 @@ export default function AuroraBackground() {
     };
   }, []);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      className="pointer-events-none fixed inset-0 z-0"
-      aria-hidden="true"
-    />
-  );
+  return <canvas ref={canvasRef} className="pointer-events-none fixed inset-0 z-0" aria-hidden="true" />;
 }

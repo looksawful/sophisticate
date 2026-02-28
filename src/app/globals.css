@@ -1,13 +1,22 @@
-@import "vidstack/styles/base.css";
-@import "vidstack/styles/community-skin/video.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html, body { height: 100%; }
-body { background: transparent; }
-body { font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif; }
-code, kbd, pre { font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace; }
+html,
+body {
+  height: 100%;
+}
+body {
+  background: transparent;
+}
+body {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+code,
+kbd,
+pre {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 
 .soph-input[type="number"] {
   appearance: textfield;
@@ -65,10 +74,30 @@ code, kbd, pre { font-family: var(--font-mono), ui-monospace, SFMono-Regular, Me
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
   }
 }

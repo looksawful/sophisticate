@@ -1,28 +1,46 @@
 "use client";
 
+import { memo, useMemo, useState } from "react";
+
 import { Input, Select } from "./controls";
+import { controllerEqual } from "./memoHelpers";
 import { ui } from "./ui";
 import type { SophisticateController } from "./useSophisticateController";
+
+/** Max visible log lines before collapsing older entries behind a button. */
+const LOG_VISIBLE_CAP = 150;
 
 const getLogLineClass = (line: string) => {
   if (line.startsWith("[error]")) return "border-red-900/60 bg-red-950/30 text-red-200";
   if (line.startsWith("[cancelled]")) return "border-amber-900/60 bg-amber-950/25 text-amber-200";
-  if (line.startsWith("[done]") || line.startsWith("[complete]")) return "border-emerald-900/60 bg-emerald-950/25 text-emerald-200";
+  if (line.startsWith("[done]") || line.startsWith("[complete]"))
+    return "border-emerald-900/60 bg-emerald-950/25 text-emerald-200";
   if (line.startsWith("[run]")) return "border-fuchsia-900/60 bg-fuchsia-950/20 text-fuchsia-200";
   if (line.startsWith("[encode]")) return "border-cyan-900/60 bg-cyan-950/20 text-cyan-200";
   if (line.startsWith("[crop]")) return "border-sky-900/60 bg-sky-950/20 text-sky-200";
   if (line.startsWith("[size]")) return "border-violet-900/60 bg-violet-950/20 text-violet-200";
-  if (line.startsWith("[input]") || line.startsWith("[meta]") || line.startsWith("[init]")) return "border-zinc-700/60 bg-zinc-900/70 text-zinc-200";
+  if (line.startsWith("[input]") || line.startsWith("[meta]") || line.startsWith("[init]"))
+    return "border-zinc-700/60 bg-zinc-900/70 text-zinc-200";
   if (line.startsWith("[ffmpeg]")) return "border-zinc-800/60 bg-zinc-950/70 text-zinc-300";
   return "border-zinc-800/60 bg-zinc-950/60 text-zinc-300";
 };
 
-export function LogPanel({ c }: { c: SophisticateController }) {
+export const LogPanel = memo(function LogPanel({ c }: { c: SophisticateController }) {
+  const [showAll, setShowAll] = useState(false);
+
+  const { visibleLogs, hiddenCount } = useMemo(() => {
+    const all = c.filteredLogs;
+    if (showAll || all.length <= LOG_VISIBLE_CAP) return { visibleLogs: all, hiddenCount: 0 };
+    return { visibleLogs: all.slice(-LOG_VISIBLE_CAP), hiddenCount: all.length - LOG_VISIBLE_CAP };
+  }, [c.filteredLogs, showAll]);
+
   return (
     <details className={`mt-2 ${ui.panelStrong}`}>
       <summary className="px-4 py-2.5 cursor-pointer select-none flex items-center justify-between text-xs text-zinc-300 hover:text-zinc-100 transition">
         <span>Log</span>
-        <span className="text-xs text-zinc-400">{c.filteredLogs.length} / {c.logs.length}</span>
+        <span className="text-xs text-zinc-400">
+          {c.filteredLogs.length} / {c.logs.length}
+        </span>
       </summary>
 
       <div className="p-3 border-t border-zinc-800 space-y-3">
@@ -46,7 +64,16 @@ export function LogPanel({ c }: { c: SophisticateController }) {
         </div>
 
         <div className="bg-black/80 border border-zinc-800 rounded-xl p-2.5 text-xs font-mono leading-relaxed max-h-56 overflow-auto">
-          {c.filteredLogs.map((line, i) => (
+          {hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              className="mb-1.5 w-full rounded-md border border-zinc-700/60 bg-zinc-900/80 px-2 py-1 text-center text-zinc-400 hover:text-zinc-200 transition"
+            >
+              Show {hiddenCount} older entries…
+            </button>
+          )}
+          {visibleLogs.map((line, i) => (
             <div key={i} className={`mb-1 rounded-md border px-2 py-1 ${getLogLineClass(line)}`}>
               {line}
             </div>
@@ -56,4 +83,4 @@ export function LogPanel({ c }: { c: SophisticateController }) {
       </div>
     </details>
   );
-}
+}, controllerEqual);

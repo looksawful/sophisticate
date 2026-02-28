@@ -1,11 +1,12 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { containerVariants, fadeVariants } from "./config";
 import { AppFooter } from "./AppFooter";
 import { LogPanel } from "./LogPanel";
 import { PreviewPane } from "./PreviewPane";
+import { ProcessingOverlay } from "./ProcessingOverlay";
 import { SidebarControls } from "./SidebarControls";
 import type { SophisticateController } from "./useSophisticateController";
 
@@ -30,20 +31,9 @@ export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
             </div>
           </motion.div>
 
-          {c.processing && (
-            <motion.div
-              initial={prefersReducedMotion ? false : { opacity: 0, scaleX: 0 }}
-              animate={prefersReducedMotion ? false : { opacity: 1, scaleX: 1 }}
-              className="mb-3 h-2 rounded-full bg-zinc-800 overflow-hidden origin-left"
-            >
-              <motion.div
-                className="h-full bg-gradient-to-r from-pink-600 to-pink-400 rounded-full"
-                initial={prefersReducedMotion ? false : { width: 0 }}
-                animate={{ width: `${Math.round(c.progress * 100)}%` }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-              />
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {c.processing && <ProcessingOverlay progress={c.progress} prefersReducedMotion={!!prefersReducedMotion} />}
+          </AnimatePresence>
 
           <div className="grid gap-4 lg:gap-5 lg:grid-cols-12">
             <PreviewPane c={c} />

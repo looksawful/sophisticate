@@ -1,0 +1,56 @@
+name: Improvement
+description: Refinement to an existing feature
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: current_problem
+    attributes:
+      label: Current problem
+      description: What's missing or inconvenient in the current implementation
+      placeholder: "The free crop mode doesn't allow resizing..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_change
+    attributes:
+      label: Proposed change
+      description: How should the feature work after improvement
+      placeholder: |
+        - Add on/off toggle for each processing parameter
+        - Keep common settings separate from per-video edits
+      validations:
+        required: true
+
+  - type: textarea
+    id: benefit
+    attributes:
+      label: Benefit
+      description: Why this improvement matters
+      placeholder: "Improves workflow speed by reducing manual setup"
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: "Conditions for marking this complete"
+      placeholder: |
+        - Feature is implemented and tested
+        - UI clearly shows what changed
+        - No regression in existing workflows
+        - Documentation updated (if needed)
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "priority:low (nice-to-have)"
+        - "priority:medium (should have)"
+        - "priority:high (blocking other work)"
+
+  - type: textarea
+    id: additional_notes
+    attributes:
+      label: Additional notes (optional)
+      placeholder: "Related issues, design considerations, etc."

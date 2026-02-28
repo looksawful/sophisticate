@@ -1,10 +1,10 @@
 "use client";
 
 import type React from "react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-export function Tooltip({
+export const Tooltip = memo(function Tooltip({
   text,
   children,
   position = "top",
@@ -16,7 +16,6 @@ export function Tooltip({
   const anchorRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [coords, setCoords] = useState({ left: 0, top: 0 });
 
   const updatePosition = useCallback(() => {
@@ -29,10 +28,7 @@ export function Tooltip({
     const gap = 8;
     const sidePadding = 8;
 
-    let top =
-      position === "top"
-        ? anchorRect.top - tooltipHeight - gap
-        : anchorRect.bottom + gap;
+    let top = position === "top" ? anchorRect.top - tooltipHeight - gap : anchorRect.bottom + gap;
 
     if (position === "top" && top < sidePadding) {
       top = anchorRect.bottom + gap;
@@ -42,17 +38,10 @@ export function Tooltip({
     }
 
     const unclampedLeft = anchorRect.left + anchorRect.width / 2 - tooltipWidth / 2;
-    const left = Math.min(
-      Math.max(unclampedLeft, sidePadding),
-      window.innerWidth - tooltipWidth - sidePadding,
-    );
+    const left = Math.min(Math.max(unclampedLeft, sidePadding), window.innerWidth - tooltipWidth - sidePadding);
 
     setCoords({ left, top });
   }, [position]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -77,14 +66,12 @@ export function Tooltip({
       onBlur={() => setOpen(false)}
     >
       {children}
-      {mounted &&
+      {open &&
         createPortal(
           <div
             ref={tooltipRef}
             style={{ left: coords.left, top: coords.top }}
-            className={`pointer-events-none fixed px-2.5 py-1.5 rounded-lg border border-zinc-700/90 bg-zinc-900/95 backdrop-blur-md text-xs text-zinc-100 shadow-lg shadow-black/45 z-[9999] transition-opacity duration-150 max-w-[min(320px,calc(100vw-16px))] ${
-              open ? "opacity-100" : "opacity-0"
-            }`}
+            className="pointer-events-none fixed px-2.5 py-1.5 rounded-lg border border-zinc-700/90 bg-zinc-900/95 backdrop-blur-md text-xs text-zinc-100 shadow-lg shadow-black/45 z-[9999] max-w-[min(320px,calc(100vw-16px))] animate-[fadeIn_150ms_ease-out]"
           >
             {text}
           </div>,
@@ -92,4 +79,4 @@ export function Tooltip({
         )}
     </div>
   );
-}
+});

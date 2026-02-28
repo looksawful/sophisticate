@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a problem found in production or beta
+labels: ["bug", "triage"]
+body:
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: Clear description of the bug or unexpected behavior
+      placeholder: "The crop tool freezes when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Step-by-step instructions to trigger the issue
+      placeholder: |
+        1. Click crop button
+        2. Select free crop mode
+        3. Try to resize...
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+      description: What should happen instead
+      placeholder: "The crop box should be freely resizable"
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Device, OS, browser version, app version
+      placeholder: "Windows 11 / Chrome 131 / App v1.0-beta"
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "priority:low (cosmetic)"
+        - "priority:medium (affects workflow)"
+        - "priority:high (breaks functionality)"
+
+  - type: textarea
+    id: additional_notes
+    attributes:
+      label: Additional notes (optional)
+      placeholder: "Screenshots, error logs, or workarounds..."

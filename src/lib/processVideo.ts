@@ -89,9 +89,11 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
 
   ff.on("log", logHandler);
 
+  const ext = file.name.match(/\.[a-zA-Z0-9]+$/)?.[0] || ".mp4";
+  const inputName = `input${ext}`;
+  const outputName = format === "WEBM" ? "output.webm" : "output.mp4";
+
   try {
-    const ext = file.name.match(/\.[a-zA-Z0-9]+$/)?.[0] || ".mp4";
-    const inputName = `input${ext}`;
     await ff.writeFile(inputName, await fetchFile(file));
     onLog(`[input] loaded ${prettyBytes(file.size)}`);
     onProgress(0.1);
@@ -130,19 +132,31 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
 
     const trimmedDuration = (((trimEnd || duration) - (trimStart || 0)) * loop) / Math.max(0.25, speed);
 
-    const presetMap = { low: "ultrafast", medium: "medium", high: "slow" } as const;
-    const preset = presetMap[quality] || "medium";
+    // WASM environment is CPU-constrained; always use ultrafast to keep
+    // encoding time in seconds rather than minutes.  Visual quality at a
+    // given bitrate is only ~5-10 % larger — an acceptable trade-off.
+    const preset = "ultrafast";
 
     const aBitrate = includeAudio ? 128 : 0;
-    const outputName = format === "WEBM" ? "output.webm" : "output.mp4";
 
     const maxBytes = maxSizeMB * 1024 * 1024;
-    const overhead = 0.98;
-    const vBitrate = targetBitrate(maxSizeMB * overhead, trimmedDuration, aBitrate);
-    onLog(`[encode] pass 1 — target video=${vBitrate}k audio=${aBitrate}k`);
+
+    // --- Quality-to-CRF mapping ---
+    // CRF produces better quality-per-byte than ABR.  We encode once with
+    // CRF + maxrate/bufsize as a soft ceiling.  If the result overshoots
+    // the size limit we fall back to an explicit ABR pass.
+    const crfMap = { low: 32, medium: 26, high: 20 } as const;
+    const crfVpxMap = { low: 36, medium: 24, high: 14 } as const;
+
+    // Compute a ceiling bitrate from the size budget so CRF doesn't
+    // blow past the limit for long/complex sources.
+    const overhead = 0.92;
+    const ceilingBitrate = targetBitrate(maxSizeMB * overhead, trimmedDuration, aBitrate);
+
+    onLog(`[encode] CRF pass — crf=${crfMap[quality]} ceiling=${ceilingBitrate}k audio=${aBitrate}k`);
 
     const pass1handler = ({ progress: p }: { progress: number }) => {
-      onProgress(0.1 + Math.min(p, 1) * 0.35);
+      onProgress(0.1 + Math.min(p, 1) * 0.45);
     };
     ff.on("progress", pass1handler);
 
@@ -156,15 +170,17 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
         ...baseArgs,
         "-c:v",
         "libvpx",
+        "-crf",
+        String(crfVpxMap[quality]),
         "-b:v",
-        `${vBitrate}k`,
+        `${ceilingBitrate}k`,
         ...(includeAudio ? ["-c:a", "libvorbis", "-b:a", `${aBitrate}k`] : ["-an"]),
         "-y",
         outputName,
       ];
       onLog(`[run] ffmpeg ${args1.join(" ")}`);
       const code1 = await ff.exec(args1);
-      if (code1 !== 0) throw new Error(`FFmpeg pass 1 exited with code ${code1}`);
+      if (code1 !== 0) throw new Error(`FFmpeg CRF pass exited with code ${code1}`);
     } else {
       const args1 = [
         ...baseArgs,
@@ -172,12 +188,12 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
         "libx264",
         "-preset",
         preset,
-        "-b:v",
-        `${vBitrate}k`,
+        "-crf",
+        String(crfMap[quality]),
         "-maxrate",
-        `${Math.round(vBitrate * 1.1)}k`,
+        `${ceilingBitrate}k`,
         "-bufsize",
-        `${vBitrate * 2}k`,
+        `${ceilingBitrate * 2}k`,
         ...(includeAudio ? ["-c:a", "aac", "-b:a", `${aBitrate}k`] : ["-an"]),
         "-movflags",
         "+faststart",
@@ -186,24 +202,25 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
       ];
       onLog(`[run] ffmpeg ${args1.join(" ")}`);
       const code1 = await ff.exec(args1);
-      if (code1 !== 0) throw new Error(`FFmpeg pass 1 exited with code ${code1}`);
+      if (code1 !== 0) throw new Error(`FFmpeg CRF pass exited with code ${code1}`);
     }
 
     ff.off("progress", pass1handler);
-    onProgress(0.5);
+    onProgress(0.6);
 
     const data1 = (await ff.readFile(outputName)) as Uint8Array;
     const size1 = data1.byteLength;
-    onLog(`[size] pass 1 result: ${prettyBytes(size1)} (target: ${prettyBytes(maxBytes)})`);
+    onLog(`[size] CRF result: ${prettyBytes(size1)} (limit: ${prettyBytes(maxBytes)})`);
 
     if (size1 > maxBytes && size1 > 0) {
+      // CRF overshot — fall back to explicit ABR with a scaled bitrate.
       const ratio = maxBytes / size1;
       const safeRatio = Math.max(0.3, ratio * 0.95);
-      const vBitrate2 = Math.max(50, Math.round(vBitrate * safeRatio));
-      onLog(`[encode] pass 2 — adjusted video=${vBitrate2}k (ratio ${safeRatio.toFixed(2)})`);
+      const vBitrate2 = Math.max(50, Math.round(ceilingBitrate * safeRatio));
+      onLog(`[encode] ABR fallback — video=${vBitrate2}k (ratio ${safeRatio.toFixed(2)})`);
 
       const pass2handler = ({ progress: p }: { progress: number }) => {
-        onProgress(0.5 + Math.min(p, 1) * 0.4);
+        onProgress(0.6 + Math.min(p, 1) * 0.3);
       };
       ff.on("progress", pass2handler);
 
@@ -255,16 +272,16 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
     const blob = new Blob([dataFinal], { type: mimeType });
     onLog(`[done] output ${prettyBytes(blob.size)} / target ${prettyBytes(maxBytes)}`);
 
+    onProgress(1);
+    return blob;
+  } finally {
+    // Always clean up temp files and listeners, even on error / cancel
     try {
       await ff.deleteFile(inputName);
     } catch {}
     try {
       await ff.deleteFile(outputName);
     } catch {}
-
-    onProgress(1);
-    return blob;
-  } finally {
     ff.off("log", logHandler);
     if (runningFFmpeg === ff) {
       runningFFmpeg = null;
