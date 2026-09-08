@@ -270,6 +270,13 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
     const dataFinal = (await ff.readFile(outputName)) as Uint8Array;
     const mimeType = format === "WEBM" ? "video/webm" : "video/mp4";
     const blob = new Blob([dataFinal], { type: mimeType });
+
+    if (blob.size > maxBytes) {
+      throw new Error(
+        `Output ${prettyBytes(blob.size)} exceeds configured limit ${prettyBytes(maxBytes)} after fallback encoding`,
+      );
+    }
+
     onLog(`[done] output ${prettyBytes(blob.size)} / target ${prettyBytes(maxBytes)}`);
 
     onProgress(1);
