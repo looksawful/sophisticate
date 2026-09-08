@@ -41,6 +41,17 @@ export function useSophisticateController() {
   // --- Composed hooks ---
   const logState = useLogState();
   const cropState = useCropState();
+  const {
+    addLog,
+    filteredLogs,
+    logFilter,
+    logQuery,
+    logs,
+    resetLogs,
+    setLogFilter,
+    setLogQuery,
+    setLogs,
+  } = logState;
 
   const getPreviewVideo = useCallback(() => {
     return cropperVideoRef.current?.current ?? null;
@@ -51,6 +62,7 @@ export function useSophisticateController() {
   }, []);
 
   const playbackState = usePlaybackState(getPreviewVideo);
+  const cleanupRaf = playbackState.cleanupRaf;
 
   const canConvert = !!fileName && !processing;
 
@@ -59,7 +71,7 @@ export function useSophisticateController() {
     (file: File) => {
       setFileName(file.name);
       setFileMeta({ size: file.size, type: file.type || "" });
-      logState.addLog(`[input] file: ${file.name} (${prettyBytes(file.size)})`);
+      addLog(`[input] file: ${file.name} (${prettyBytes(file.size)})`);
       fileRef.current = file;
 
       if (fileUrlRef.current) URL.revokeObjectURL(fileUrlRef.current);
@@ -79,9 +91,8 @@ export function useSophisticateController() {
       playbackState.resetPlayback();
       cropState.setShowCirclePreview(false);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      logState.addLog,
+      addLog,
       cropState.setCrop,
       cropState.setUiCrop,
       cropState.setZoom,
@@ -94,7 +105,7 @@ export function useSophisticateController() {
     setFileName("");
     setFileMeta({ size: 0, type: "" });
     setProgress(0);
-    logState.resetLogs();
+    resetLogs();
     cropState.resetCrop();
     setShowResult(false);
     playbackState.resetPlayback();
@@ -108,8 +119,7 @@ export function useSophisticateController() {
     resultUrlRef.current = "";
     setResultUrl("");
     setResultBlob(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [logState.resetLogs, cropState.resetCrop, playbackState.resetPlayback]);
+  }, [resetLogs, cropState.resetCrop, playbackState.resetPlayback]);
 
   const handleDropFiles = useCallback(
     (files: File[]) => {
@@ -137,11 +147,11 @@ export function useSophisticateController() {
         const file = item.getAsFile();
         if (!file) continue;
         setFile(file);
-        logState.addLog("[input] pasted file from clipboard");
+        addLog("[input] pasted file from clipboard");
         break;
       }
     },
-    [logState.addLog, setFile],
+    [addLog, setFile],
   );
 
   // --- Video metadata ---
@@ -162,15 +172,14 @@ export function useSophisticateController() {
       playbackState.setCurrentTime(0);
       playbackState.setTrimStart(0);
       playbackState.setTrimEnd(duration);
-      logState.addLog(`[meta] ${w}x${h}, ${duration.toFixed(1)}s`);
+      addLog(`[meta] ${w}x${h}, ${duration.toFixed(1)}s`);
 
       const preset = ASPECT_PRESETS.find((p) => p.label === cropState.activePreset) ?? ASPECT_PRESETS[0];
       cropState.setCrop(cropState.applyPresetCrop(preset, w, h));
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       cropState.activePreset,
-      logState.addLog,
+      addLog,
       cropState.applyPresetCrop,
       getPreviewVideo,
       cropState.setVideoDims,
@@ -187,7 +196,7 @@ export function useSophisticateController() {
     if (!fileName || !fileRef.current) return;
 
     if (cropState.videoDims.w <= 0 || cropState.videoDims.h <= 0) {
-      logState.addLog("[error] video metadata not loaded");
+      addLog("[error] video metadata not loaded");
       return;
     }
 
@@ -199,7 +208,7 @@ export function useSophisticateController() {
 
     const effectiveCrop = cropState.cropEnabled ? cropState.crop : { x: 0, y: 0, w: 1, h: 1 };
     const px = cropPixels(effectiveCrop, cropState.videoDims.w, cropState.videoDims.h);
-    logState.setLogs([
+    setLogs([
       "[run] start",
       `[run] max size=${sizeLimitEnabled ? maxSize : "unlimited"} MB, format=${format}, audio=${includeAudio ? "on" : "off"}`,
       `[run] crop ${cropState.cropEnabled ? `${px.w}x${px.h}+${px.x}+${px.y}` : "disabled"} from ${cropState.videoDims.w}x${cropState.videoDims.h}`,
@@ -219,7 +228,7 @@ export function useSophisticateController() {
         videoWidth: cropState.videoDims.w,
         videoHeight: cropState.videoDims.h,
         duration: playbackState.videoDuration || 1,
-        onLog: logState.addLog,
+        onLog: addLog,
         onProgress: setProgress,
         trimStart: playbackState.trimStart > 0 ? playbackState.trimStart : undefined,
         trimEnd:
@@ -238,23 +247,22 @@ export function useSophisticateController() {
       resultUrlRef.current = objectUrl;
       setResultUrl(objectUrl);
       setShowResult(true);
-      logState.addLog(`[complete] ${prettyBytes(blob.size)} — ready to download`);
+      addLog(`[complete] ${prettyBytes(blob.size)} — ready to download`);
     } catch (err) {
       if (cancelRequestedRef.current) {
-        logState.addLog("[cancelled] processing stopped");
+        addLog("[cancelled] processing stopped");
       } else {
         const msg = err instanceof Error ? err.message : String(err);
-        logState.addLog(`[error] ${msg}`);
+        addLog(`[error] ${msg}`);
       }
     } finally {
       setProcessing(false);
       auroraSignal.paused = false;
       cancelRequestedRef.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    logState.addLog,
-    logState.setLogs,
+    addLog,
+    setLogs,
     cropState.crop,
     cropState.cropEnabled,
     cropState.videoDims.w,
@@ -276,10 +284,10 @@ export function useSophisticateController() {
   const stopCurrentProcess = useCallback(async () => {
     if (!processing) return;
     cancelRequestedRef.current = true;
-    logState.addLog("[run] stopping...");
+    addLog("[run] stopping...");
     const { stopProcessing } = await import("@/lib/processVideo");
     stopProcessing();
-  }, [logState.addLog, processing]);
+  }, [addLog, processing]);
 
   const handleDownload = useCallback(() => {
     if (!resultBlob) return;
@@ -322,10 +330,9 @@ export function useSophisticateController() {
     return () => {
       if (fileUrlRef.current) URL.revokeObjectURL(fileUrlRef.current);
       if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
-      playbackState.cleanupRaf();
+      cleanupRaf();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [cleanupRaf]);
 
   // --- Trim boundary enforcement ---
   useEffect(() => {
@@ -357,7 +364,7 @@ export function useSophisticateController() {
       return () => cancelIdleCallback(id);
     }
     el.scrollIntoView({ behavior: "auto" });
-  }, [logState.logs]);
+  }, [logs]);
 
   // --- Derived state ---
   const fileBadge = fileName
@@ -392,10 +399,10 @@ export function useSophisticateController() {
     quality,
     includeAudio,
     showCirclePreview: cropState.showCirclePreview,
-    logs: logState.logs,
-    filteredLogs: logState.filteredLogs,
-    logFilter: logState.logFilter,
-    logQuery: logState.logQuery,
+    logs,
+    filteredLogs,
+    logFilter,
+    logQuery,
     processing,
     progress,
     resultBlob,
@@ -431,8 +438,8 @@ export function useSophisticateController() {
     resetTrimRange: playbackState.resetTrimRange,
     togglePreviewPlayback: playbackState.togglePreviewPlayback,
     setShowCirclePreview: cropState.setShowCirclePreview,
-    setLogFilter: logState.setLogFilter,
-    setLogQuery: logState.setLogQuery,
+    setLogFilter,
+    setLogQuery,
     setMaxSize,
     setFormat,
     setCrop: cropState.setCrop,
