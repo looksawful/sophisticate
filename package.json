@@ -9,7 +9,7 @@
     "dev:auto": "concurrently -k -s first \"next dev\" \"wait-on http://localhost:3000 && open-cli http://localhost:3000\"",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "postinstall": "node scripts/copy-ffmpeg-core.mjs",
     "pretest": "node scripts/generate-test-fixtures.mjs",
