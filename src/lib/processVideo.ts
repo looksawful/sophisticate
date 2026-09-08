@@ -133,23 +133,17 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
     const trimmedDuration = (((trimEnd || duration) - (trimStart || 0)) * loop) / Math.max(0.25, speed);
 
     // WASM environment is CPU-constrained; always use ultrafast to keep
-    // encoding time in seconds rather than minutes.  Visual quality at a
+    // encoding time in seconds rather than minutes. Visual quality at a
     // given bitrate is only ~5-10 % larger — an acceptable trade-off.
     const preset = "ultrafast";
-
     const aBitrate = includeAudio ? 128 : 0;
-
     const maxBytes = maxSizeMB * 1024 * 1024;
 
-    // --- Quality-to-CRF mapping ---
-    // CRF produces better quality-per-byte than ABR.  We encode once with
-    // CRF + maxrate/bufsize as a soft ceiling.  If the result overshoots
-    // the size limit we fall back to an explicit ABR pass.
+    // CRF produces better quality-per-byte than ABR. Encode once with CRF
+    // and a bitrate ceiling, then adapt with a bounded number of ABR retries
+    // if the real output still exceeds the requested byte budget.
     const crfMap = { low: 32, medium: 26, high: 20 } as const;
     const crfVpxMap = { low: 36, medium: 24, high: 14 } as const;
-
-    // Compute a ceiling bitrate from the size budget so CRF doesn't
-    // blow past the limit for long/complex sources.
     const overhead = 0.92;
     const ceilingBitrate = targetBitrate(maxSizeMB * overhead, trimmedDuration, aBitrate);
 
@@ -208,81 +202,91 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
     ff.off("progress", pass1handler);
     onProgress(0.6);
 
-    const data1 = (await ff.readFile(outputName)) as Uint8Array;
-    const size1 = data1.byteLength;
-    onLog(`[size] CRF result: ${prettyBytes(size1)} (limit: ${prettyBytes(maxBytes)})`);
+    let finalData = (await ff.readFile(outputName)) as Uint8Array;
+    let finalSize = finalData.byteLength;
+    onLog(`[size] CRF result: ${prettyBytes(finalSize)} (limit: ${prettyBytes(maxBytes)})`);
 
-    if (size1 > maxBytes && size1 > 0) {
-      // CRF overshot — fall back to explicit ABR with a scaled bitrate.
-      const ratio = maxBytes / size1;
+    let currentBitrate = ceilingBitrate;
+    const maxFallbackAttempts = 2;
+
+    for (let attempt = 1; attempt <= maxFallbackAttempts && finalSize > maxBytes && finalSize > 0; attempt++) {
+      const ratio = maxBytes / finalSize;
       const safeRatio = Math.max(0.3, ratio * 0.95);
-      const vBitrate2 = Math.max(50, Math.round(ceilingBitrate * safeRatio));
-      onLog(`[encode] ABR fallback — video=${vBitrate2}k (ratio ${safeRatio.toFixed(2)})`);
+      currentBitrate = Math.max(50, Math.round(currentBitrate * safeRatio));
+      onLog(
+        `[encode] ABR fallback ${attempt}/${maxFallbackAttempts} — video=${currentBitrate}k (ratio ${safeRatio.toFixed(2)})`,
+      );
 
-      const pass2handler = ({ progress: p }: { progress: number }) => {
-        onProgress(0.6 + Math.min(p, 1) * 0.3);
+      const progressStart = attempt === 1 ? 0.6 : 0.75;
+      const fallbackHandler = ({ progress: p }: { progress: number }) => {
+        onProgress(progressStart + Math.min(p, 1) * 0.15);
       };
-      ff.on("progress", pass2handler);
+      ff.on("progress", fallbackHandler);
 
-      if (format === "WEBM") {
-        const args2 = [
-          ...baseArgs,
-          "-c:v",
-          "libvpx",
-          "-b:v",
-          `${vBitrate2}k`,
-          ...(includeAudio ? ["-c:a", "libvorbis", "-b:a", `${aBitrate}k`] : ["-an"]),
-          "-y",
-          outputName,
-        ];
-        onLog(`[run] ffmpeg ${args2.join(" ")}`);
-        const code2 = await ff.exec(args2);
-        if (code2 !== 0) throw new Error(`FFmpeg pass 2 exited with code ${code2}`);
-      } else {
-        const args2 = [
-          ...baseArgs,
-          "-c:v",
-          "libx264",
-          "-preset",
-          preset,
-          "-b:v",
-          `${vBitrate2}k`,
-          "-maxrate",
-          `${Math.round(vBitrate2 * 1.1)}k`,
-          "-bufsize",
-          `${vBitrate2 * 2}k`,
-          ...(includeAudio ? ["-c:a", "aac", "-b:a", `${aBitrate}k`] : ["-an"]),
-          "-movflags",
-          "+faststart",
-          "-y",
-          outputName,
-        ];
-        onLog(`[run] ffmpeg ${args2.join(" ")}`);
-        const code2 = await ff.exec(args2);
-        if (code2 !== 0) throw new Error(`FFmpeg pass 2 exited with code ${code2}`);
+      try {
+        if (format === "WEBM") {
+          const args = [
+            ...baseArgs,
+            "-c:v",
+            "libvpx",
+            "-b:v",
+            `${currentBitrate}k`,
+            ...(includeAudio ? ["-c:a", "libvorbis", "-b:a", `${aBitrate}k`] : ["-an"]),
+            "-y",
+            outputName,
+          ];
+          onLog(`[run] ffmpeg ${args.join(" ")}`);
+          const code = await ff.exec(args);
+          if (code !== 0) throw new Error(`FFmpeg fallback ${attempt} exited with code ${code}`);
+        } else {
+          const args = [
+            ...baseArgs,
+            "-c:v",
+            "libx264",
+            "-preset",
+            preset,
+            "-b:v",
+            `${currentBitrate}k`,
+            "-maxrate",
+            `${Math.round(currentBitrate * 1.1)}k`,
+            "-bufsize",
+            `${currentBitrate * 2}k`,
+            ...(includeAudio ? ["-c:a", "aac", "-b:a", `${aBitrate}k`] : ["-an"]),
+            "-movflags",
+            "+faststart",
+            "-y",
+            outputName,
+          ];
+          onLog(`[run] ffmpeg ${args.join(" ")}`);
+          const code = await ff.exec(args);
+          if (code !== 0) throw new Error(`FFmpeg fallback ${attempt} exited with code ${code}`);
+        }
+      } finally {
+        ff.off("progress", fallbackHandler);
       }
 
-      ff.off("progress", pass2handler);
+      finalData = (await ff.readFile(outputName)) as Uint8Array;
+      finalSize = finalData.byteLength;
+      onLog(
+        `[size] fallback ${attempt}/${maxFallbackAttempts}: ${prettyBytes(finalSize)} (limit: ${prettyBytes(maxBytes)})`,
+      );
     }
 
     onProgress(0.92);
 
-    const dataFinal = (await ff.readFile(outputName)) as Uint8Array;
     const mimeType = format === "WEBM" ? "video/webm" : "video/mp4";
-    const blob = new Blob([dataFinal], { type: mimeType });
+    const blob = new Blob([finalData], { type: mimeType });
 
     if (blob.size > maxBytes) {
       throw new Error(
-        `Output ${prettyBytes(blob.size)} exceeds configured limit ${prettyBytes(maxBytes)} after fallback encoding`,
+        `Output ${prettyBytes(blob.size)} exceeds configured limit ${prettyBytes(maxBytes)} after ${maxFallbackAttempts} fallback attempts`,
       );
     }
 
     onLog(`[done] output ${prettyBytes(blob.size)} / target ${prettyBytes(maxBytes)}`);
-
     onProgress(1);
     return blob;
   } finally {
-    // Always clean up temp files and listeners, even on error / cancel
     try {
       await ff.deleteFile(inputName);
     } catch {}
