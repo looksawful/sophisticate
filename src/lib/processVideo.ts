@@ -160,47 +160,50 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
       baseArgs.push("-af", audioFilters.join(","));
     }
 
-    if (format === "WEBM") {
-      const args1 = [
-        ...baseArgs,
-        "-c:v",
-        "libvpx",
-        "-crf",
-        String(crfVpxMap[quality]),
-        "-b:v",
-        `${ceilingBitrate}k`,
-        ...(includeAudio ? ["-c:a", "libvorbis", "-b:a", `${aBitrate}k`] : ["-an"]),
-        "-y",
-        outputName,
-      ];
-      onLog(`[run] ffmpeg ${args1.join(" ")}`);
-      const code1 = await ff.exec(args1);
-      if (code1 !== 0) throw new Error(`FFmpeg CRF pass exited with code ${code1}`);
-    } else {
-      const args1 = [
-        ...baseArgs,
-        "-c:v",
-        "libx264",
-        "-preset",
-        preset,
-        "-crf",
-        String(crfMap[quality]),
-        "-maxrate",
-        `${ceilingBitrate}k`,
-        "-bufsize",
-        `${ceilingBitrate * 2}k`,
-        ...(includeAudio ? ["-c:a", "aac", "-b:a", `${aBitrate}k`] : ["-an"]),
-        "-movflags",
-        "+faststart",
-        "-y",
-        outputName,
-      ];
-      onLog(`[run] ffmpeg ${args1.join(" ")}`);
-      const code1 = await ff.exec(args1);
-      if (code1 !== 0) throw new Error(`FFmpeg CRF pass exited with code ${code1}`);
+    try {
+      if (format === "WEBM") {
+        const args1 = [
+          ...baseArgs,
+          "-c:v",
+          "libvpx",
+          "-crf",
+          String(crfVpxMap[quality]),
+          "-b:v",
+          `${ceilingBitrate}k`,
+          ...(includeAudio ? ["-c:a", "libvorbis", "-b:a", `${aBitrate}k`] : ["-an"]),
+          "-y",
+          outputName,
+        ];
+        onLog(`[run] ffmpeg ${args1.join(" ")}`);
+        const code1 = await ff.exec(args1);
+        if (code1 !== 0) throw new Error(`FFmpeg CRF pass exited with code ${code1}`);
+      } else {
+        const args1 = [
+          ...baseArgs,
+          "-c:v",
+          "libx264",
+          "-preset",
+          preset,
+          "-crf",
+          String(crfMap[quality]),
+          "-maxrate",
+          `${ceilingBitrate}k`,
+          "-bufsize",
+          `${ceilingBitrate * 2}k`,
+          ...(includeAudio ? ["-c:a", "aac", "-b:a", `${aBitrate}k`] : ["-an"]),
+          "-movflags",
+          "+faststart",
+          "-y",
+          outputName,
+        ];
+        onLog(`[run] ffmpeg ${args1.join(" ")}`);
+        const code1 = await ff.exec(args1);
+        if (code1 !== 0) throw new Error(`FFmpeg CRF pass exited with code ${code1}`);
+      }
+    } finally {
+      ff.off("progress", pass1handler);
     }
 
-    ff.off("progress", pass1handler);
     onProgress(0.6);
 
     let finalData = (await ff.readFile(outputName)) as Uint8Array;
