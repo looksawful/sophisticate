@@ -7,7 +7,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate:
@@ -23,35 +23,6 @@ jobs:
         with:
           node-version: 20
           cache: npm
-
-      - name: One-shot dependency security refresh
-        if: github.event_name == 'push' && github.ref == 'refs/heads/audit/architecture-tooling-2026-09'
-        run: |
-          if node -e "process.exit(require('./package.json').dependencies.next === '15.5.24' ? 0 : 1)"; then
-            echo "Security-sensitive dependencies already refreshed."
-          else
-            npm install --save-exact \
-              next@15.5.24 \
-              react@19.2.8 \
-              react-dom@19.2.8 \
-              @ffmpeg/core@0.12.6
-
-            npm install --save-dev --save-exact \
-              eslint-config-next@15.5.24 \
-              vitest@4.1.11 \
-              concurrently@9.2.4 \
-              open-cli@9.0.0 \
-              postcss@8.5.28 \
-              @types/react@19.2.17 \
-              @types/react-dom@19.2.3 \
-              @types/node@20
-
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package.json package-lock.json
-            git commit -m "chore: refresh security-sensitive dependencies"
-            git push origin HEAD:audit/architecture-tooling-2026-09
-          fi
 
       - name: Install dependencies
         run: npm ci
