@@ -246,12 +246,12 @@ export function useSophisticateController() {
     setProgress(0);
     setShowResult(false);
 
-    const effectiveCrop = cropEnabled ? crop : { x: 0, y: 0, w: 1, h: 1 };
-    const px = cropPixels(effectiveCrop, videoDims.w, videoDims.h);
+    const effectiveCrop = cropEnabled ? crop : undefined;
+    const px = effectiveCrop ? cropPixels(effectiveCrop, videoDims.w, videoDims.h) : null;
     setLogs([
       "[run] start",
       `[run] max size=${sizeLimitEnabled ? maxSize : "unlimited"} MB, format=${format}, audio=${includeAudio ? "on" : "off"}`,
-      `[run] crop ${cropEnabled ? `${px.w}x${px.h}+${px.x}+${px.y}` : "disabled"} from ${videoDims.w}x${videoDims.h}`,
+      `[run] crop ${px ? `${px.w}x${px.h}+${px.x}+${px.y}` : "disabled"} from ${videoDims.w}x${videoDims.h}`,
     ]);
 
     if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
@@ -263,7 +263,7 @@ export function useSophisticateController() {
       const { processVideo } = await import("@/lib/processVideo");
       const blob = await processVideo(fileRef.current, {
         crop: effectiveCrop,
-        maxSizeMB: sizeLimitEnabled ? parseFloat(maxSize) || 0.49 : 9999,
+        maxSizeMB: sizeLimitEnabled ? parseFloat(maxSize) || 0.49 : undefined,
         format,
         videoWidth: videoDims.w,
         videoHeight: videoDims.h,
