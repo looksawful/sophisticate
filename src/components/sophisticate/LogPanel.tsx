@@ -37,7 +37,7 @@ export const LogPanel = memo(function LogPanel({ c }: { c: SophisticateControlle
   return (
     <details className={`mt-2 ${ui.panelStrong}`}>
       <summary className="px-4 py-2.5 cursor-pointer select-none flex items-center justify-between text-xs text-zinc-300 hover:text-zinc-100 transition">
-        <span>Log</span>
+        <span>Processing log</span>
         <span className="text-xs text-zinc-400">
           {c.filteredLogs.length} / {c.logs.length}
         </span>
@@ -51,14 +51,14 @@ export const LogPanel = memo(function LogPanel({ c }: { c: SophisticateControlle
             className="px-2 py-1 text-xs"
           >
             <option value="all">All</option>
-            <option value="process">Process</option>
+            <option value="process">Processing</option>
             <option value="errors">Errors</option>
             <option value="ffmpeg">FFmpeg</option>
           </Select>
           <Input
             value={c.logQuery}
             onChange={(e) => c.setLogQuery(e.target.value)}
-            placeholder="Search log"
+            placeholder="Search log entries"
             className="min-w-[180px] flex-1 px-2 py-1 text-xs"
           />
         </div>
@@ -70,7 +70,7 @@ export const LogPanel = memo(function LogPanel({ c }: { c: SophisticateControlle
               onClick={() => setShowAll(true)}
               className="mb-1.5 w-full rounded-md border border-zinc-700/60 bg-zinc-900/80 px-2 py-1 text-center text-zinc-400 hover:text-zinc-200 transition"
             >
-              Show {hiddenCount} older entries…
+              Show {hiddenCount} earlier entries
             </button>
           )}
           {visibleLogs.map((entry) => (
