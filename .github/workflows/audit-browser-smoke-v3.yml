@@ -125,7 +125,7 @@ jobs:
             assert.equal(hasAudio('/tmp/unlimited.mp4'),true);
 
             // Return to the source view before changing preview-only controls.
-            await page.getByRole('button',{name:'Original'}).click();
+            await page.getByRole('button',{name:'Original'}).first().click();
 
             // The previous smoke used 0.10 MB while Loop+128 kbps audio were both enabled.
             // Six seconds of output made that target infeasible before video/container overhead.
@@ -140,7 +140,7 @@ jobs:
             assert(limited.size<=maxBytes,`${limited.size} > ${maxBytes}`);
 
             // Return to source controls, then exercise cropped WEBM with size limiting disabled.
-            await page.getByRole('button',{name:'Original'}).click();
+            await page.getByRole('button',{name:'Original'}).first().click();
             await page.getByRole('button',{name:'Crop OFF'}).click();
             await page.getByRole('button',{name:'3:4'}).click();
             await page.getByRole('button',{name:'Limit ON'}).click();
