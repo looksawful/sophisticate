@@ -2,44 +2,56 @@
 
 ## Runtime model
 
-Sophisticate is a fully client-side Next.js application exported as static files for GitHub Pages. Video processing happens in the browser through FFmpeg WASM; there is no application server in the processing path.
+Sophisticate is a statically exported Next.js application. Video encoding runs in the browser through FFmpeg WASM; no application server participates in the processing path.
 
-The pinned `@ffmpeg/core` package is an application runtime dependency. `postinstall` copies its JavaScript and WASM artifacts into `public/ffmpeg-core/`, and the browser loads them through the configured GitHub Pages base path. Production processing therefore does not depend on a third-party runtime CDN.
+The installed `@ffmpeg/core` package supplies the runtime files. `postinstall` copies its JavaScript and WASM artifacts into `public/ffmpeg-core/`, and the browser resolves them through the configured GitHub Pages base path. Production processing does not depend on a third-party runtime CDN.
 
-## Ownership map
+## Module responsibilities
 
 ### App shell
-`src/app/*` owns Next.js layout, global styles, and page composition.
+
+`src/app/*` contains the Next.js layout, global styles, metadata, and page composition.
 
 ### Feature entry
-`src/components/SophisticatePreview.tsx` creates the feature controller and passes it to presentation components.
 
-### Application controller
-`src/components/sophisticate/useSophisticateController.ts` coordinates file/object-URL lifecycle, metadata, encoding actions, keyboard shortcuts, and derived UI state. It composes dedicated crop, playback, and logging hooks.
+`src/components/SophisticatePreview.tsx` creates the feature controller and passes it into the view.
 
-The returned controller remains the main coupling point. New state domains should prefer focused owners rather than expanding this facade further.
+### Application state and actions
+
+`src/components/sophisticate/useSophisticateController.ts` coordinates source-file lifecycle, metadata, processing actions, keyboard shortcuts, result state, and derived UI state. Crop, playback, and logging state already live in focused hooks.
+
+The controller is still the main cross-domain coupling point. Issue #8 tracks narrowing the state/view boundary before multi-video work expands it further.
 
 ### Presentation
-`src/components/sophisticate/*` presentation components render controls, preview, progress, logs, and result state. They should not own FFmpeg lifecycle or encoding policy.
 
-### Media pipeline
-`src/lib/processVideo.ts` owns FFmpeg WASM loading, command construction, crop/trim/speed/fps/audio transforms, progress handling, bounded size-limit retries, cleanup, and output creation.
+`src/components/sophisticate/*` renders controls, preview, timeline, progress, logs, and output state. Presentation components should not own FFmpeg lifecycle or encoding policy.
 
-`src/lib/videoUtils.ts` owns pure calculations such as normalized crop conversion and target bitrate.
+### Media processing
 
-## Runtime contracts
+`src/lib/processVideo.ts` currently combines FFmpeg loading, command construction, transforms, execution, retries, progress, cleanup, and output creation. Issue #16 tracks separating pure command planning from FFmpeg session lifecycle and orchestration.
 
-- Object URLs are revoked when replaced and on component cleanup.
-- A cancelled encode terminates the active FFmpeg instance and prevents reuse of that cancelled instance.
-- Disabled crop omits the crop filter instead of applying a full-frame crop.
-- Disabled size limiting omits the size ceiling rather than using a sentinel maximum.
-- When a size limit is enabled, the final Blob is checked. The pipeline performs bounded fallback attempts and throws if the final artifact still exceeds the configured limit.
-- GitHub Pages `basePath` and `assetPrefix` must also resolve `/ffmpeg-core` runtime assets correctly.
+`src/lib/videoUtils.ts` contains pure media calculations such as crop normalization and target bitrate.
 
-## Current risks and debt
+## Behavior rules
 
-1. `useSophisticateController` still exposes a broad cross-domain surface. Track the behavior-preserving narrowing in issue #8 before large multi-file work.
-2. FFmpeg is held as singleton runtime state. Current UI processing is serialized; future batch/concurrent work must not assume this layer is re-entrant.
-3. `src/components/sophisticate/ui-audit.test.ts` still contains source-text characterization checks. Migrate durable contracts to rendered behavioral tests under issue #7.
-4. Free crop still derives an aspect ratio from custom width/height instead of providing unconstrained resizing. Issue #2 remains a real product defect.
-5. Browser FFmpeg/framework behavior is not exercised by the automated CI gate. Runtime-changing merges require the manual Chromium smoke workflow.
+- Revoke object URLs when their source/result is replaced and on component cleanup.
+- Disabled crop must omit the crop filter rather than apply a hidden full-frame crop.
+- Disabled size limiting must omit the size ceiling and fallback logic.
+- When a size limit is enabled, success requires the final encoded Blob to satisfy the configured maximum. Bounded fallback may retry; unresolved overshoot must fail explicitly.
+- GitHub Pages `basePath` and `assetPrefix` must resolve the deployed FFmpeg runtime files correctly.
+- Cancellation terminates an active FFmpeg encode. Cancellation during FFmpeg initialization is a known gap tracked in #14.
+- Current processing is serialized. Do not assume the module-global FFmpeg state is safe for concurrent jobs.
+
+## Known architecture gaps
+
+- #13: trim boundaries need one shared normalization rule.
+- #14: processing runs need cancellation/session identity across initialization, encoding, and fallback stages.
+- #15: processing options need explicit validation and reset/persistence rules.
+- #16: media planning, FFmpeg session lifecycle, and orchestration are still combined.
+- #8: the controller/view boundary remains broad.
+- #7: several UI tests still inspect source text instead of rendered behavior.
+- #17: keyboard, programmatic labels/status, tooltip semantics, and reduced-motion behavior need stronger coverage.
+- #18: TypeScript currently runs with `strict: false`.
+- #2: the UI label historically called `Free` still represents a custom fixed aspect ratio rather than unconstrained crop.
+
+Work order and release dependencies belong in [ROADMAP.md](ROADMAP.md), not in this architecture description.
