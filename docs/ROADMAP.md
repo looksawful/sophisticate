@@ -1,30 +1,62 @@
 # Roadmap
 
-GitHub Issues are the task source of truth. Do not maintain a second copy-paste TODO list in the repository.
+GitHub Issues are the task source of truth. This file defines execution order and phase exit conditions; it should not duplicate full Issue bodies.
 
-## Before the next development stage
+## Phase A — finish PR #12 safely
 
-1. **Finish audit PR #12 safely.** Its actual scope includes the engineering baseline plus runtime fixes, dependency/framework upgrades, local FFmpeg-core ownership, optional-stage semantics, and hard final-size enforcement. Keep it draft until the Chromium smoke workflow has been recorded.
-2. **Merge and verify the baseline.** After #12 is approved, verify both `CI / validate` and GitHub Pages on the resulting `main` SHA before closing the audit/CI/runtime issues.
-3. **Finish dependency/tooling triage (#10).** The current audit branch reports zero npm-audit vulnerabilities, but CI also reports that the selected ESLint release is no longer supported. Resolve that deliberately rather than with a forced dependency churn.
-4. **Fix unconstrained free crop (#2).** Current `Free` mode still derives a fixed aspect from custom width/height, so this remains a real core crop defect.
-5. **Improve regression boundaries (#7).** Replace durable source-text UI assertions with rendered behavioral coverage incrementally.
-6. **Narrow the controller facade (#8).** Keep this behavior-preserving and complete it before adding large multi-file state domains.
+Current blocker: the audit/remediation branch passes canonical CI, but the real Chromium FFmpeg WASM smoke is not green.
 
-## Issue status from the audit
+Work:
 
-- #1: implementation already exists on `main`; close as completed.
-- #2: open and reproducible from the current crop-state implementation.
-- #3: partially implemented by #12 for crop and size-limit omission; keep open until remaining scope is explicitly re-triaged after merge.
-- #4: valid next-stage product work; do not mix it into cleanup/remediation.
-- #5: implemented and tested in #12; close only after merge plus runtime smoke.
-- #6: implemented in #12 by serving pinned npm-owned FFmpeg core assets; close only after browser/base-path smoke and merge.
-- #7: open technical debt.
-- #8: open architecture debt.
-- #9: audit branch CI is green; close only after the merged `main` SHA is green.
-- #10: security findings are remediated on the branch; supported-tooling cleanup remains.
-- #11: audit umbrella remains open until #12 is merged or deliberately superseded.
+- Resolve or explicitly disposition the Chromium smoke failure.
+- Review the Next/React/tooling upgrades in PR #12 as runtime changes, not cleanup-only changes.
+- Keep only browser-smoke workflow code that is maintainable after the audit.
+- Run canonical CI on the exact final PR HEAD.
+- Merge only after browser/runtime risk is resolved or explicitly accepted.
+- Verify both CI and GitHub Pages on the resulting `main` SHA.
 
-## Next-stage product direction
+Exit condition: merged `main` has the intended runtime fixes, green canonical CI, successful Pages deployment, and an explicit browser-runtime disposition.
 
-Multi-video queue / merge work (#4) should start only after the baseline is merged and the controller/test boundaries are stable enough to carry multi-file state. Re-triage #3 alongside that design so global versus per-clip processing options have one coherent contract.
+Close candidates after evidence: #5, #6, #9. Keep #11 open until repository, Issues, and Notion status agree.
+
+## Phase B — correctness before refactoring
+
+1. #13 — normalize trim boundaries, including tiny clips and handle crossing.
+2. #14 — give every processing run cancellation/session identity, including FFmpeg initialization.
+3. #15 — create one validated processing request and define file-replacement/reset persistence.
+
+Exit condition: boundary, cancellation, and validation behavior has regression coverage; silent fallback values are no longer the primary input contract.
+
+## Phase C — media architecture and test seam
+
+1. #16 — separate deterministic command planning, FFmpeg session lifecycle, and orchestration; report processing stages explicitly.
+2. #19 — remove copied private media algorithms from tests and exercise production planning/normalization code instead.
+
+Exit condition: media planning is directly testable, runtime/session ownership is explicit, and the UI receives real processing-stage information instead of inferring it from progress percentages.
+
+## Phase D — application state, UI, and accessibility
+
+1. #8 — narrow controller/view models without changing behavior.
+2. #7 — replace critical source-text UI assertions with rendered user-event tests.
+3. #17 — add programmatic labels/states, keyboard timeline behavior, tooltip/status semantics, and reduced-motion coverage.
+4. #2 — implement true unconstrained Free crop with explicit crop-mode semantics.
+5. #3 — finish processing-option taxonomy, persistence, and copy after #15/#16 define the underlying behavior.
+
+Exit condition: child views consume narrow coherent state/actions, critical interactions have behavioral tests, pointer-only trim has keyboard parity, and crop/processing labels match actual semantics.
+
+## Phase E — type and toolchain hardening
+
+1. #18 — migrate to strict TypeScript in controlled domain slices.
+2. #10 — isolate and verify dependency, runtime, compiler, Node, and lint-tool migrations.
+
+Exit condition: strictness/toolchain changes are reviewable migrations rather than one mixed dependency churn.
+
+## Phase F — multi-video product work
+
+#4 starts only after single-file processing/session/controller ownership is stable.
+
+Target model:
+
+`Session → Clip → Effective Request → Job → Engine Scheduler`
+
+Start with serialized processing. Concurrency should be a separate product/engineering decision with explicit browser-runtime evidence.
