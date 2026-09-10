@@ -124,6 +124,9 @@ jobs:
             assert.equal(dims('/tmp/unlimited.mp4'),'320x240');
             assert.equal(hasAudio('/tmp/unlimited.mp4'),true);
 
+            // Return to the source view before changing preview-only controls.
+            await page.getByRole('button',{name:'Original'}).click();
+
             // The previous smoke used 0.10 MB while Loop+128 kbps audio were both enabled.
             // Six seconds of output made that target infeasible before video/container overhead.
             // Disable Loop and audio so this scenario tests the size contract instead of an impossible request.
@@ -136,7 +139,8 @@ jobs:
             const maxBytes=0.10*1024*1024;
             assert(limited.size<=maxBytes,`${limited.size} > ${maxBytes}`);
 
-            // Cropped WEBM path with size limiting disabled.
+            // Return to source controls, then exercise cropped WEBM with size limiting disabled.
+            await page.getByRole('button',{name:'Original'}).click();
             await page.getByRole('button',{name:'Crop OFF'}).click();
             await page.getByRole('button',{name:'3:4'}).click();
             await page.getByRole('button',{name:'Limit ON'}).click();
