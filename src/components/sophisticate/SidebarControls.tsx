@@ -40,7 +40,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                     size="sm"
                     className="h-9 min-w-[52px] px-2 text-sm font-semibold"
                   >
-                    {preset.label}
+                    {preset.label === "Free" ? "Custom" : preset.label}
                   </Button>
                 </Tooltip>
               ))}
@@ -91,7 +91,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
 
         <section className="rounded-xl border border-zinc-800/90 p-3.5 grid gap-3">
           <div className="flex items-center justify-between">
-            <FieldLabel className="text-base">Crop</FieldLabel>
+            <FieldLabel className="text-base">Zoom</FieldLabel>
             <div className="text-sm text-zinc-300 font-mono">{c.zoom.toFixed(2)}x</div>
           </div>
           <input
@@ -122,7 +122,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
         <section className="rounded-xl border border-zinc-800/90 overflow-hidden flex flex-col">
           <div className="p-3.5 grid gap-3">
             <div className="flex items-center justify-between">
-              <FieldLabel className="text-base">Max size (MB)</FieldLabel>
+              <FieldLabel className="text-base">Max file size (MB)</FieldLabel>
               <button
                 type="button"
                 onClick={() => c.setSizeLimitEnabled((v) => !v)}
@@ -132,10 +132,10 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                     : "bg-zinc-800 text-zinc-500 border border-zinc-700"
                 }`}
               >
-                Size {c.sizeLimitEnabled ? "ON" : "OFF"}
+                Limit {c.sizeLimitEnabled ? "ON" : "OFF"}
               </button>
             </div>
-            <Tooltip text="Target output file size" position="top">
+            <Tooltip text="Maximum output file size" position="top">
               <div
                 className={`transition-opacity ${c.sizeLimitEnabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}
               >
@@ -192,15 +192,15 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                 </div>
                 <div className="text-sm text-zinc-400">
                   {c.quality === "low"
-                    ? "Fast encode, larger file"
+                    ? "Prioritizes smaller output"
                     : c.quality === "high"
-                      ? "Slow encode, best quality"
-                      : "Balanced"}
+                      ? "Prioritizes visual quality"
+                      : "Balances quality and size"}
                 </div>
               </div>
 
               <div className="grid gap-2">
-                <FieldLabel>Speed</FieldLabel>
+                <FieldLabel>Playback speed</FieldLabel>
                 <div className="flex gap-2 flex-wrap">
                   {[0.5, 1, 1.5, 2].map((s) => (
                     <Button
@@ -218,7 +218,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
               </div>
 
               <div className="grid gap-2">
-                <FieldLabel>FPS</FieldLabel>
+                <FieldLabel>Frame rate</FieldLabel>
                 <div className="flex gap-2 flex-wrap">
                   <Button
                     onClick={() => c.setFps(0)}
@@ -227,7 +227,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                     size="sm"
                     className="font-semibold"
                   >
-                    Off
+                    Source
                   </Button>
                   {[15, 24, 30, 60].map((f) => (
                     <Button
