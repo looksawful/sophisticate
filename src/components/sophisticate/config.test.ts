@@ -8,6 +8,16 @@ describe("config constants", () => {
     expect(labels).toContain("Free");
   });
 
+  it("RATIO_PRESETS includes a 3:4 portrait crop", () => {
+    expect(RATIO_PRESETS).toContainEqual(
+      expect.objectContaining({
+        label: "3:4",
+        w: 3,
+        h: 4,
+      }),
+    );
+  });
+
   it("RATIO_PRESETS has valid aspect ratios", () => {
     for (const preset of RATIO_PRESETS) {
       expect(preset.w).toBeGreaterThan(0);
