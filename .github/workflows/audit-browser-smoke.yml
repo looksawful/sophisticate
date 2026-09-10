@@ -120,7 +120,7 @@ jobs:
             const response = await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 60_000 });
             assert.equal(response?.status(), 200, 'Pages-like route must return 200');
             assert.equal(new URL(page.url()).pathname, '/sophisticate/', 'base-path route must be preserved');
-            await page.getByRole('button', { name: 'Choose file' }).waitFor({ timeout: 20_000 });
+            await page.locator('button').filter({ hasText: 'Choose file' }).waitFor({ timeout: 20_000 });
 
             await page.locator('input[type="file"]').first().setInputFiles(fixture);
             await waitMetadata();
