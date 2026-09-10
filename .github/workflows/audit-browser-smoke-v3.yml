@@ -1,4 +1,4 @@
-name: One-shot Chromium media smoke v3
+name: Chromium media smoke
 
 on:
   push:
@@ -69,31 +69,82 @@ jobs:
           page.on('response',r=>{if(r.url().includes('/ffmpeg-core/'))coreResponses.push({url:r.url(),status:r.status()});});
           page.on('pageerror',e=>pageErrors.push(String(e)));
           page.on('requestfailed',r=>requestFailures.push(`${r.method()} ${r.url()} ${r.failure()?.errorText??''}`));
+
           const waitLog=(text,timeout=120000)=>page.getByText(text,{exact:false}).first().waitFor({state:'attached',timeout});
           const waitMetadata=()=>page.getByText(/from 320×240/).first().waitFor({state:'attached',timeout:30000});
-          const downloadTo=async target=>{const b=page.getByRole('button',{name:/^Download \(/});await b.waitFor({timeout:120000});const[d]=await Promise.all([page.waitForEvent('download'),b.click()]);await d.saveAs(target);return stat(target);};
           const dims=target=>execFileSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=width,height','-of','csv=p=0:s=x',target],{encoding:'utf8'}).trim();
+          const hasAudio=target=>execFileSync('ffprobe',['-v','error','-select_streams','a:0','-show_entries','stream=codec_type','-of','csv=p=0',target],{encoding:'utf8'}).trim()==='audio';
+
+          const waitForOutput=async(timeout=120000)=>{
+            const download=page.getByRole('button',{name:/^Download \(/});
+            const errorLog=page.getByText(/^\[error\]/).last();
+            await Promise.race([
+              download.waitFor({state:'visible',timeout}),
+              errorLog.waitFor({state:'attached',timeout}),
+            ]);
+            if(await errorLog.count()){
+              const text=await errorLog.textContent();
+              throw new Error(`Application processing error: ${text}`);
+            }
+            return download;
+          };
+
+          const downloadTo=async target=>{
+            const button=await waitForOutput();
+            const[d]=await Promise.all([page.waitForEvent('download'),button.click()]);
+            await d.saveAs(target);
+            return stat(target);
+          };
+
           try{
             const response=await page.goto(baseUrl,{waitUntil:'networkidle',timeout:60000});
-            assert.equal(response?.status(),200); assert.equal(new URL(page.url()).pathname,'/sophisticate/');
-            await page.locator('button').filter({hasText:'Choose file'}).waitFor({timeout:20000});
-            await page.locator('input[type="file"]').first().setInputFiles(fixture); await waitMetadata();
+            assert.equal(response?.status(),200);
+            assert.equal(new URL(page.url()).pathname,'/sophisticate/');
+            await page.getByRole('button',{name:'Choose video'}).waitFor({timeout:20000});
+            await page.locator('input[type="file"]').first().setInputFiles(fixture);
+            await waitMetadata();
 
-            await page.getByRole('button',{name:'Convert'}).click();
+            // Cancellation and retry with the default processing configuration.
+            await page.getByRole('button',{name:'Process'}).click();
             await waitLog('[init] FFmpeg ready',90000);
-            const stop=page.getByRole('button',{name:/Stop/}); await stop.waitFor({timeout:10000}); await stop.click();
-            await waitLog('[cancelled] processing stopped',30000); await page.getByRole('button',{name:'Convert'}).waitFor({timeout:10000});
+            const stop=page.getByRole('button',{name:/Stop/});
+            await stop.waitFor({timeout:10000});
+            await stop.click();
+            await waitLog('[cancelled] processing stopped',30000);
+            await page.getByRole('button',{name:'Process'}).waitFor({timeout:10000});
 
-            await page.getByRole('button',{name:'Crop ON'}).click(); await page.getByRole('button',{name:'Size ON'}).click();
-            await page.getByRole('button',{name:'Convert'}).click(); await waitLog('[crop] disabled'); await waitLog('size limit=disabled');
-            const unlimited=await downloadTo('/tmp/unlimited.mp4'); assert(unlimited.size>0); assert.equal(dims('/tmp/unlimited.mp4'),'320x240');
+            // Unlimited MP4 keeps the source frame and audio. Default Loop remains enabled here.
+            await page.getByRole('button',{name:'Crop ON'}).click();
+            await page.getByRole('button',{name:'Limit ON'}).click();
+            await page.getByRole('button',{name:'Process'}).click();
+            await waitLog('[crop] disabled');
+            await waitLog('size limit=disabled');
+            const unlimited=await downloadTo('/tmp/unlimited.mp4');
+            assert(unlimited.size>0);
+            assert.equal(dims('/tmp/unlimited.mp4'),'320x240');
+            assert.equal(hasAudio('/tmp/unlimited.mp4'),true);
 
-            await page.getByRole('button',{name:'Size OFF'}).click(); await page.locator('input[type="number"]').first().fill('0.10');
-            await page.getByRole('button',{name:'Convert'}).click(); const limited=await downloadTo('/tmp/limited.mp4');
-            const maxBytes=0.10*1024*1024; assert(limited.size<=maxBytes,`${limited.size} > ${maxBytes}`);
+            // The previous smoke used 0.10 MB while Loop+128 kbps audio were both enabled.
+            // Six seconds of output made that target infeasible before video/container overhead.
+            // Disable Loop and audio so this scenario tests the size contract instead of an impossible request.
+            await page.getByRole('button',{name:'Limit OFF'}).click();
+            await page.getByRole('button',{name:'Loop ON'}).click();
+            await page.getByRole('button',{name:'Include audio ON'}).click();
+            await page.getByRole('spinbutton',{name:'Maximum output file size in megabytes'}).fill('0.10');
+            await page.getByRole('button',{name:'Process'}).click();
+            const limited=await downloadTo('/tmp/limited.mp4');
+            const maxBytes=0.10*1024*1024;
+            assert(limited.size<=maxBytes,`${limited.size} > ${maxBytes}`);
 
-            await page.getByRole('button',{name:'Crop OFF'}).click(); await page.getByRole('button',{name:'3:4'}).click(); await page.getByRole('button',{name:'Size ON'}).click(); await page.getByRole('button',{name:'WEBM'}).click();
-            await page.getByRole('button',{name:'Convert'}).click(); const webm=await downloadTo('/tmp/crop.webm'); assert(webm.size>0); assert.equal(dims('/tmp/crop.webm'),'180x240');
+            // Cropped WEBM path with size limiting disabled.
+            await page.getByRole('button',{name:'Crop OFF'}).click();
+            await page.getByRole('button',{name:'3:4'}).click();
+            await page.getByRole('button',{name:'Limit ON'}).click();
+            await page.getByRole('button',{name:'WEBM'}).click();
+            await page.getByRole('button',{name:'Process'}).click();
+            const webm=await downloadTo('/tmp/crop.webm');
+            assert(webm.size>0);
+            assert.equal(dims('/tmp/crop.webm'),'180x240');
 
             assert.equal(coreResponses.find(x=>x.url.endsWith('/sophisticate/ffmpeg-core/ffmpeg-core.js'))?.status,200);
             assert.equal(coreResponses.find(x=>x.url.endsWith('/sophisticate/ffmpeg-core/ffmpeg-core.wasm'))?.status,200);
@@ -101,12 +152,21 @@ jobs:
             const unexpectedFailures=requestFailures.filter(s=>!(s.startsWith('GET blob:')&&s.includes('ERR_ABORTED')));
             assert.deepEqual(unexpectedFailures,[]);
             console.log('SMOKE_RESULT '+JSON.stringify({status:'PASS',coreResponses,expectedCancelledBlobRequests:requestFailures.filter(s=>s.startsWith('GET blob:')&&s.includes('ERR_ABORTED')).length,outputs:{unlimitedMp4Bytes:unlimited.size,limitedMp4Bytes:limited.size,limitedMp4MaxBytes:maxBytes,croppedWebmBytes:webm.size}}));
-          }catch(error){await page.screenshot({path:'audit-browser-smoke-failure.png',fullPage:true}).catch(()=>{});console.error('BROWSER_SMOKE_FAILURE',error);console.error('coreResponses',coreResponses);console.error('pageErrors',pageErrors);console.error('requestFailures',requestFailures);throw error;}finally{await browser.close();}
+          }catch(error){
+            const visibleLogs=await page.locator('details').last().locator('div.font-mono > div').allTextContents().catch(()=>[]);
+            await page.screenshot({path:'audit-browser-smoke-failure.png',fullPage:true}).catch(()=>{});
+            console.error('BROWSER_SMOKE_FAILURE',error);
+            console.error('uiLogTail',visibleLogs.slice(-40));
+            console.error('coreResponses',coreResponses);
+            console.error('pageErrors',pageErrors);
+            console.error('requestFailures',requestFailures);
+            throw error;
+          }finally{await browser.close();}
           NODE
           node .audit-browser-smoke.mjs
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: audit-browser-smoke-v3-failure
+          name: chromium-media-smoke-failure
           path: audit-browser-smoke-failure.png
           if-no-files-found: ignore
