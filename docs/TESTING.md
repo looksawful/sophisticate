@@ -1,43 +1,38 @@
 # Testing and validation
 
 ## Automated gate
-The repository CI is expected to run on Node 20 and execute:
+
+The canonical local gate is:
 
 ```bash
 npm ci
-npm run lint
-npm run typecheck
-npm run test
-npm run build
+npm run check
 ```
 
-`npm run check` runs the same local validation sequence after dependencies are installed.
+`npm run check` runs lint, TypeScript validation, Vitest, and the production build. `pretest` generates deterministic MP4 fixtures, so a local FFmpeg CLI is required. CI installs that dependency explicitly.
 
 ## Test layers
 
 ### Pure logic
-Keep crop math, bitrate calculations and command-building policy covered by deterministic unit tests.
+Keep crop math, bitrate calculations, and deterministic command policy covered by unit tests.
 
 ### Media pipeline
-Mock FFmpeg only where necessary. Tests should verify command semantics, cleanup, cancellation, output MIME type and size-limit postconditions. A mocked successful encode is not proof that a real browser encode works.
+Mock FFmpeg only where necessary. Tests should verify command semantics, cleanup, cancellation, output MIME type, disabled-stage behavior, runtime asset paths, and size-limit postconditions.
 
 ### UI behavior
-Prefer DOM/user-event tests for controls, disabled states, keyboard commands and state transitions. Source-text assertions may remain as temporary characterization tests, but they should not be the primary regression boundary.
+Prefer rendered DOM/user-event tests for controls, disabled states, keyboard commands, and state transitions. Source-text assertions are temporary characterization evidence, not the preferred long-term regression boundary.
 
-### Manual browser smoke test
-Before release or after FFmpeg/media changes, validate in a Chromium browser:
+### Browser runtime smoke
+Before merging or releasing changes to FFmpeg loading, codecs, media semantics, framework runtime, or Pages routing, follow `.agents/skills/browser-release-smoke/SKILL.md` in Chromium.
 
-| Case | Expected result |
-| --- | --- |
-| MP4 + audio | preview loads and export is downloadable |
-| WEBM | export MIME/container matches WEBM |
-| crop enabled | output dimensions match crop |
-| crop disabled | full frame is preserved |
-| trim | duration reflects selected range |
-| 0.5x / 2x speed | video and audio timing remain coherent |
-| cancellation | processing stops and a later encode can start |
-| size limit | final Blob satisfies the requested limit or the UI reports failure |
-| replace file | old object URLs/results are discarded |
+A successful static build or Pages deployment proves neither browser codec behavior nor FFmpeg WASM initialization.
+
+## Current audited baseline
+
+The latest clean GitHub Actions validation on the audit branch completed install, dependency audit, lint, typecheck, deterministic fixture generation, Vitest, and production build successfully. It reported 13 passing test files / 207 passing tests and zero npm-audit vulnerabilities.
+
+That run did not provide real Chromium media-processing evidence. Browser smoke therefore remains the merge gate for the runtime-affecting audit PR.
 
 ## CI troubleshooting
-If Pages succeeds while `CI / validate` fails, treat the repository as unhealthy. Deployment success only proves the Pages workflow completed; it does not substitute for lint, typecheck or tests.
+
+Treat `CI / validate` and Pages deployment as separate signals. Pages success does not substitute for lint, typecheck, tests, or build; automated CI success does not substitute for the browser smoke workflow when the runtime surface changed.
