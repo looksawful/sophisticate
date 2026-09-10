@@ -20,6 +20,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
             <button
               type="button"
               onClick={() => c.setCropEnabled((v) => !v)}
+              aria-pressed={c.cropEnabled}
               className={`text-xs font-semibold px-2 py-1 rounded-lg transition ${
                 c.cropEnabled
                   ? "bg-pink-500/15 text-pink-300 border border-pink-500/40"
@@ -30,12 +31,13 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
             </button>
           </div>
           <div className={`transition-opacity ${c.cropEnabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
-            <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
+            <div className="flex flex-wrap items-start gap-x-2 gap-y-1" role="group" aria-label="Aspect ratio preset">
               {SPECIAL_PRESETS.map((preset) => (
                 <Tooltip key={preset.label} text={preset.desc} position="bottom">
                   <Button
                     onClick={() => c.applyPreset(preset)}
                     disabled={!c.fileUrl || c.processing}
+                    aria-pressed={c.activePreset === preset.label}
                     variant={c.activePreset === preset.label ? "chipActive" : "chip"}
                     size="sm"
                     className="h-9 min-w-[52px] px-2 text-sm font-semibold"
@@ -54,6 +56,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                   value={c.customW}
                   onChange={(e) => c.applyCustomRatio(e.target.value, c.customH)}
                   disabled={!c.fileUrl || c.processing}
+                  aria-label="Custom aspect ratio width"
                   className="w-16 px-2 py-1.5 text-sm tabular-nums text-center"
                   placeholder="W"
                 />
@@ -65,18 +68,20 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                   value={c.customH}
                   onChange={(e) => c.applyCustomRatio(c.customW, e.target.value)}
                   disabled={!c.fileUrl || c.processing}
+                  aria-label="Custom aspect ratio height"
                   className="w-16 px-2 py-1.5 text-sm tabular-nums text-center"
                   placeholder="H"
                 />
               </div>
             )}
             <div className="my-2 h-px bg-zinc-700/60" />
-            <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
+            <div className="flex flex-wrap items-start gap-x-2 gap-y-1" role="group" aria-label="Fixed aspect ratio">
               {RATIO_PRESETS.map((preset) => (
                 <Tooltip key={preset.label} text={preset.desc} position="bottom">
                   <Button
                     onClick={() => c.applyPreset(preset)}
                     disabled={!c.fileUrl || c.processing}
+                    aria-pressed={c.activePreset === preset.label}
                     variant={c.activePreset === preset.label ? "chipActive" : "chip"}
                     size="sm"
                     className="h-9 min-w-[52px] px-2 text-sm font-semibold"
@@ -102,6 +107,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
             value={c.zoom}
             onChange={(e) => c.setZoom(parseFloat(e.target.value))}
             disabled={!c.fileUrl || c.processing}
+            aria-label="Zoom"
             className="soph-range w-full"
           />
           <Button
@@ -126,6 +132,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
               <button
                 type="button"
                 onClick={() => c.setSizeLimitEnabled((v) => !v)}
+                aria-pressed={c.sizeLimitEnabled}
                 className={`text-xs font-semibold px-2 py-1 rounded-lg transition ${
                   c.sizeLimitEnabled
                     ? "bg-pink-500/15 text-pink-300 border border-pink-500/40"
@@ -146,18 +153,20 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                   value={c.maxSize}
                   onChange={(e) => c.setMaxSize(e.target.value)}
                   disabled={c.processing}
+                  aria-label="Maximum output file size in megabytes"
                   className="w-full px-3.5 py-3 text-xl font-semibold tabular-nums"
                 />
               </div>
             </Tooltip>
             <div className="grid gap-2.5">
               <FieldLabel className="text-base">Format</FieldLabel>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2" role="group" aria-label="Output format">
                 {(["MP4", "WEBM"] as const).map((format) => (
                   <Button
                     key={format}
                     onClick={() => c.setFormat(format)}
                     disabled={!c.fileUrl || c.processing}
+                    aria-pressed={c.format === format}
                     variant={c.format === format ? "chipActive" : "chip"}
                     size="sm"
                     className="py-3 font-semibold"
@@ -176,12 +185,13 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
             <div className="px-3.5 pb-3.5 grid gap-3 pt-1">
               <div className="grid gap-2">
                 <FieldLabel>Quality</FieldLabel>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2" role="group" aria-label="Output quality">
                   {(["low", "medium", "high"] as const).map((q) => (
                     <Button
                       key={q}
                       onClick={() => c.setQuality(q)}
                       disabled={!c.fileUrl || c.processing}
+                      aria-pressed={c.quality === q}
                       variant={c.quality === q ? "chipActive" : "chip"}
                       size="sm"
                       className="font-semibold capitalize"
@@ -201,12 +211,13 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
 
               <div className="grid gap-2">
                 <FieldLabel>Playback speed</FieldLabel>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap" role="group" aria-label="Playback speed">
                   {[0.5, 1, 1.5, 2].map((s) => (
                     <Button
                       key={s}
                       onClick={() => c.setSpeed(s)}
                       disabled={!c.fileUrl || c.processing}
+                      aria-pressed={c.speed === s}
                       variant={c.speed === s ? "chipActive" : "chip"}
                       size="sm"
                       className="font-semibold"
@@ -219,10 +230,11 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
 
               <div className="grid gap-2">
                 <FieldLabel>Frame rate</FieldLabel>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap" role="group" aria-label="Output frame rate">
                   <Button
                     onClick={() => c.setFps(0)}
                     disabled={!c.fileUrl || c.processing}
+                    aria-pressed={c.fps === 0}
                     variant={c.fps === 0 ? "chipActive" : "chip"}
                     size="sm"
                     className="font-semibold"
@@ -234,6 +246,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                       key={f}
                       onClick={() => c.setFps(f)}
                       disabled={!c.fileUrl || c.processing}
+                      aria-pressed={c.fps === f}
                       variant={c.fps === f ? "chipActive" : "chip"}
                       size="sm"
                       className="font-semibold"
