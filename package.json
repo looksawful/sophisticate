@@ -6,36 +6,38 @@
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbo",
-    "dev:auto": "concurrently -k -s first \"next dev\" \"wait-on http://localhost:3000 && open-cli http://localhost:3000\"",
+    "dev:auto": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "test": "vitest run"
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "node scripts/copy-ffmpeg-core.mjs",
+    "pretest": "node scripts/generate-test-fixtures.mjs",
+    "test": "vitest run",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
+    "@ffmpeg/core": "0.12.6",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "framer-motion": "12.33.0",
     "lucide-react": "^0.563.0",
-    "next": "^14.2.35",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "react-dropzone": "^14.4.0",
     "react-easy-crop": "^5.5.6"
   },
   "devDependencies": {
-    "@types/node": "20.14.10",
-    "@types/react": "18.3.3",
-    "@types/react-dom": "18.3.0",
+    "@types/node": "20.19.43",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
     "autoprefixer": "10.4.20",
-    "concurrently": "^9.2.1",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "^14.2.7",
-    "open-cli": "^8.0.0",
-    "postcss": "8.4.41",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.4",
+    "postcss": "8.5.28",
     "tailwindcss": "3.4.10",
     "typescript": "5.5.4",
-    "vitest": "4.0.18",
-    "wait-on": "^8.0.5"
+    "vitest": "4.1.11"
   }
 }

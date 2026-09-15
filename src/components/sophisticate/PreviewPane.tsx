@@ -30,9 +30,9 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
   });
 
   const dropHint = useMemo(() => {
-    if (isDragReject) return "Unsupported file. Drop a video file.";
-    if (isDragActive) return "Release to upload video";
-    return "Drag and drop video here";
+    if (isDragReject) return "This file isn’t supported. Choose a video file.";
+    if (isDragActive) return "Drop to load video";
+    return "Drop a video here";
   }, [isDragActive, isDragReject]);
 
   const timelineMax = Math.max(c.videoDuration, 0.1);
@@ -170,7 +170,7 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                   "rounded-none border-none font-medium",
                 )}
               >
-                Source
+                Original
               </button>
               <button
                 onClick={() => c.setShowResult(true)}
@@ -180,7 +180,7 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                   "rounded-none border-none font-medium",
                 )}
               >
-                Result
+                Output
               </button>
             </div>
           )}
@@ -220,31 +220,31 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                       controls
                       playsInline
                       crossOrigin="anonymous"
-                      title={c.fileName || "Result preview"}
+                      title={c.fileName || "Output preview"}
                     />
                   </div>
                   <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
-                    <Tooltip text="Choose another file (Ctrl+O)" position="bottom">
+                    <Tooltip text="Choose another video (Ctrl+O)" position="bottom">
                       <Button
                         onClick={() => c.inputRef.current?.click()}
                         disabled={c.processing}
                         className="font-medium backdrop-blur-sm bg-black/45 border-zinc-600 text-sm px-3.5 py-2"
                       >
-                        Replace file
+                        Replace video
                       </Button>
                     </Tooltip>
-                    <Tooltip text="Remove the loaded file (Esc)" position="bottom">
+                    <Tooltip text="Remove the loaded video (Esc)" position="bottom">
                       <Button
                         onClick={c.clearAll}
                         disabled={c.processing}
                         className="font-medium backdrop-blur-sm bg-black/45 border-zinc-600 text-sm px-3.5 py-2"
                       >
-                        Clear file
+                        Remove video
                       </Button>
                     </Tooltip>
                   </div>
                   <div className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-green-700/85 text-xs font-semibold text-white">
-                    Result - {c.resultBlob ? prettyBytes(c.resultBlob.size) : ""}
+                    Output · {c.resultBlob ? prettyBytes(c.resultBlob.size) : ""}
                   </div>
                 </motion.div>
               ) : c.fileUrl ? (
@@ -314,22 +314,22 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                     {c.fmtTime(c.currentTime)} / {c.fmtTime(c.videoDuration)}
                   </div>
                   <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
-                    <Tooltip text="Choose another file (Ctrl+O)" position="top">
+                    <Tooltip text="Choose another video (Ctrl+O)" position="top">
                       <Button
                         onClick={() => c.inputRef.current?.click()}
                         disabled={c.processing}
                         className="font-medium backdrop-blur-sm bg-black/45 border-zinc-600"
                       >
-                        Replace file
+                        Replace video
                       </Button>
                     </Tooltip>
-                    <Tooltip text="Remove the loaded file (Esc)" position="top">
+                    <Tooltip text="Remove the loaded video (Esc)" position="top">
                       <Button
                         onClick={c.clearAll}
                         disabled={c.processing}
                         className="font-medium backdrop-blur-sm bg-black/45 border-zinc-600"
                       >
-                        Clear file
+                        Remove video
                       </Button>
                     </Tooltip>
                   </div>
@@ -344,14 +344,14 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                     aria-pressed={c.showCirclePreview}
                   >
                     {c.showCirclePreview ? <Circle size={12} /> : <Square size={12} />}
-                    <span>Circle {c.showCirclePreview ? "ON" : "OFF"}</span>
+                    <span>Circle preview {c.showCirclePreview ? "ON" : "OFF"}</span>
                   </button>
                 </motion.div>
               ) : (
                 <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0">
                   <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
                     <div className="text-lg text-zinc-50">{dropHint}</div>
-                    <div className="text-sm text-zinc-300">or choose file / paste</div>
+                    <div className="text-sm text-zinc-300">Choose a video or paste one from the clipboard</div>
                     <Button
                       type="button"
                       onClick={open}
@@ -360,7 +360,7 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                       className="inline-flex items-center justify-center px-5 py-3 text-base font-semibold"
                     >
                       <Upload size={16} className="mr-2" />
-                      Choose file
+                      Choose video
                     </Button>
                   </div>
                 </motion.div>
@@ -470,7 +470,7 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                   aria-pressed={c.includeAudio}
                 >
                   {c.includeAudio ? <Volume2 size={12} /> : <VolumeX size={12} />}
-                  <span>Audio {c.includeAudio ? "ON" : "OFF"}</span>
+                  <span>Include audio {c.includeAudio ? "ON" : "OFF"}</span>
                 </button>
               </div>
             </div>
@@ -482,10 +482,10 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
             <Tooltip
               text={
                 c.canConvert
-                  ? "Crop, compress, and encode your video (Enter)"
+                  ? "Process the video with the current settings (Enter)"
                   : c.processing
-                    ? "Processing in progress"
-                    : "Load a video file first"
+                    ? "Video is processing"
+                    : "Choose a video first"
               }
             >
               <motion.button
@@ -498,12 +498,12 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                     : "rounded-2xl bg-zinc-800 px-6 py-4 text-zinc-500 cursor-not-allowed"
                 }`}
               >
-                {c.processing ? "Processing\u2026" : "Convert"}
+                {c.processing ? "Processing video…" : "Process"}
               </motion.button>
             </Tooltip>
 
             {c.processing ? (
-              <Tooltip text="Stop current processing">
+              <Tooltip text="Stop processing">
                 <motion.button
                   {...hoverLift}
                   onClick={c.stopCurrentProcess}
@@ -514,7 +514,7 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                 </motion.button>
               </Tooltip>
             ) : (
-              <Tooltip text={c.resultBlob ? "Save the processed video to disk" : "Process a video first to download"}>
+              <Tooltip text={c.resultBlob ? "Download the processed video" : "Process the video before downloading"}>
                 <motion.button
                   {...hoverLift}
                   onClick={c.handleDownload}

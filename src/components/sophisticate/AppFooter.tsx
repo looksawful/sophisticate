@@ -16,19 +16,19 @@ export const AppFooter = memo(function AppFooter() {
           <kbd className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-800/50 text-pink-200/90 text-xs font-semibold shadow-sm">
             Ctrl+V
           </kbd>{" "}
-          paste
+          paste video
         </span>
         <span className="flex items-center gap-1">
           <kbd className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-800/50 text-pink-200/90 text-xs font-semibold shadow-sm">
             Ctrl+O
           </kbd>{" "}
-          open
+          open video
         </span>
         <span className="flex items-center gap-1">
           <kbd className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-800/50 text-pink-200/90 text-xs font-semibold shadow-sm">
             Enter
           </kbd>{" "}
-          run
+          process
         </span>
         <span className="flex items-center gap-1">
           <kbd className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-800/50 text-pink-200/90 text-xs font-semibold shadow-sm">
@@ -39,7 +39,7 @@ export const AppFooter = memo(function AppFooter() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <span className="tracking-[0.14em] uppercase">Sophisticate — browser-native video tools — 2026 looksawful</span>
+        <span className="tracking-[0.14em] uppercase">Sophisticate · video processing in your browser · looksawful</span>
         <span className="text-zinc-600">|</span>
         <a className="hover:text-zinc-100 transition" href={repoUrl} target="_blank" rel="noreferrer">
           GitHub

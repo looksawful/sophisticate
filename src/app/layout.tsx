@@ -16,7 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata = {
   title: "Sophisticate",
-  description: "Video crop and compress in the browser",
+  description: "Crop, trim, compress, and convert video in your browser.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
