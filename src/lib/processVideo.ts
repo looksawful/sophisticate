@@ -103,7 +103,11 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
 
   reportLog("[init] loading FFmpeg WASM core...");
   const ff = await getFFmpeg();
-  throwIfCancelled();
+  if (!isActive()) {
+    if (ffmpegInstance === ff) ffmpegInstance = null;
+    ff.terminate();
+    throw new ProcessingCancelledError();
+  }
   runningFFmpeg = ff;
   reportLog("[init] FFmpeg ready");
   reportProgress(0.05);
