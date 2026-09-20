@@ -2,6 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 
+import { normalizeTrimRange } from "./trimRange";
+
 export function usePlaybackState(getPreviewVideo: () => HTMLVideoElement | null) {
   const [videoDuration, setVideoDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -27,12 +29,9 @@ export function usePlaybackState(getPreviewVideo: () => HTMLVideoElement | null)
 
   const setTrimRange = useCallback(
     (start: number, end: number) => {
-      const max = Math.max(0, videoDuration || 0);
-      const minGap = 0.1;
-      const safeStart = Math.max(0, Math.min(start, max));
-      const safeEnd = Math.max(safeStart + minGap, Math.min(end, max));
-      setTrimStart(safeStart);
-      setTrimEnd(safeEnd);
+      const range = normalizeTrimRange(start, end, videoDuration);
+      setTrimStart(range.start);
+      setTrimEnd(range.end);
     },
     [videoDuration],
   );
