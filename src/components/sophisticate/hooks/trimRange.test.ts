@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { normalizeTrimRange } from "./trimRange";
 
 describe("normalizeTrimRange", () => {
+  it("returns the exact full-duration range used by reset", () => {
+    expect(normalizeTrimRange(0, 10, 10)).toEqual({ start: 0, end: 10 });
+  });
+
   it("preserves ordinary valid ranges", () => {
     expect(normalizeTrimRange(2, 7, 10)).toEqual({ start: 2, end: 7 });
   });
