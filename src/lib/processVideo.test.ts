@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { buildAtempoFilters } from "./processVideo";
 
 /**
  * processVideo relies on FFmpeg WASM which can't run in Node.
- * These tests validate the helper logic and exported contract shape.
+ * These tests validate production helper logic and exported contract shape.
  */
 
 describe("processVideo module contract", () => {
@@ -18,24 +19,7 @@ describe("processVideo module contract", () => {
   });
 });
 
-describe("buildAtempoFilters (internal logic mirror)", () => {
-  // Mirror of the private buildAtempoFilters to verify correctness
-  function buildAtempoFilters(speed: number): string[] {
-    if (!(speed > 0) || speed === 1) return [];
-    const filters: string[] = [];
-    let remaining = speed;
-    while (remaining < 0.5) {
-      filters.push("atempo=0.5");
-      remaining /= 0.5;
-    }
-    while (remaining > 2) {
-      filters.push("atempo=2.0");
-      remaining /= 2;
-    }
-    filters.push(`atempo=${remaining.toFixed(4)}`);
-    return filters;
-  }
-
+describe("buildAtempoFilters production contract", () => {
   it("returns empty for speed=1", () => {
     expect(buildAtempoFilters(1)).toEqual([]);
   });

@@ -3,6 +3,7 @@
  * and FFmpeg argument construction scenarios.
  */
 import { describe, expect, it } from "vitest";
+import { buildAtempoFilters } from "./processVideo";
 
 describe("processVideo module exports", () => {
   it("exports processVideo as async function", async () => {
@@ -22,25 +23,6 @@ describe("processVideo module exports", () => {
     expect(() => stopProcessing()).not.toThrow();
   });
 });
-
-/* ------------------------------------------------------------------ */
-/*  buildAtempoFilters — mirror of private function                   */
-/* ------------------------------------------------------------------ */
-function buildAtempoFilters(speed: number): string[] {
-  if (!(speed > 0) || speed === 1) return [];
-  const filters: string[] = [];
-  let remaining = speed;
-  while (remaining < 0.5) {
-    filters.push("atempo=0.5");
-    remaining /= 0.5;
-  }
-  while (remaining > 2) {
-    filters.push("atempo=2.0");
-    remaining /= 2;
-  }
-  filters.push(`atempo=${remaining.toFixed(4)}`);
-  return filters;
-}
 
 describe("buildAtempoFilters — comprehensive", () => {
   it("speed=1 => empty", () => {
