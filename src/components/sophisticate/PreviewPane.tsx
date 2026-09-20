@@ -11,7 +11,8 @@ import "react-easy-crop/react-easy-crop.css";
 import { hoverLift, riseVariants } from "./config";
 import { Button, getButtonClass } from "./controls";
 import { controllerEqual } from "./memoHelpers";
-import { TimelineTrimHandles } from "./TimelineTrimHandles";\nimport { Tooltip } from "./Tooltip";
+import { TimelineTrimHandles } from "./TimelineTrimHandles";
+import { Tooltip } from "./Tooltip";
 import { ui } from "./ui";
 import type { SophisticateController } from "./useSophisticateController";
 
