@@ -3,18 +3,24 @@
 import type { PointerEventHandler } from "react";
 
 type TimelineTrimHandlesProps = {
-  startPercent: number;
-  endPercent: number;
+  duration: number;
+  trimStart: number;
+  trimEnd: number;
   onStartPointerDown: PointerEventHandler<HTMLDivElement>;
   onEndPointerDown: PointerEventHandler<HTMLDivElement>;
 };
 
 export function TimelineTrimHandles({
-  startPercent,
-  endPercent,
+  duration,
+  trimStart,
+  trimEnd,
   onStartPointerDown,
   onEndPointerDown,
 }: TimelineTrimHandlesProps) {
+  const timelineMax = Math.max(duration, 0.1);
+  const startPercent = (Math.max(0, Math.min(trimStart, timelineMax)) / timelineMax) * 100;
+  const endPercent = (Math.max(0, Math.min(trimEnd, timelineMax)) / timelineMax) * 100;
+
   return (
     <>
       <div
