@@ -4,6 +4,15 @@ import { type Crop, cropPixels, prettyBytes, targetBitrate } from "./videoUtils"
 
 let ffmpegInstance: FFmpeg | null = null;
 let runningFFmpeg: FFmpeg | null = null;
+let nextRunId = 0;
+let activeRunId: number | null = null;
+
+class ProcessingCancelledError extends Error {
+  constructor() {
+    super("Processing cancelled");
+    this.name = "ProcessingCancelledError";
+  }
+}
 
 function buildAtempoFilters(speed: number): string[] {
   if (!(speed > 0) || speed === 1) return [];
@@ -55,6 +64,7 @@ export interface ProcessOptions {
 }
 
 export function stopProcessing(): void {
+  activeRunId = null;
   if (!runningFFmpeg) return;
   runningFFmpeg.terminate();
   runningFFmpeg = null;
@@ -62,6 +72,19 @@ export function stopProcessing(): void {
 }
 
 export async function processVideo(file: File, options: ProcessOptions): Promise<Blob> {
+  const runId = ++nextRunId;
+  activeRunId = runId;
+  const isActive = () => activeRunId === runId;
+  const throwIfCancelled = () => {
+    if (!isActive()) throw new ProcessingCancelledError();
+  };
+  const reportLog = (message: string) => {
+    if (isActive()) options.onLog(message);
+  };
+  const reportProgress = (progress: number) => {
+    if (isActive()) options.onProgress(progress);
+  };
+
   const {
     crop,
     maxSizeMB,
@@ -80,13 +103,14 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
     includeAudio = true,
   } = options;
 
-  onLog("[init] loading FFmpeg WASM core...");
+  reportLog("[init] loading FFmpeg WASM core...");
   const ff = await getFFmpeg();
+  throwIfCancelled();
   runningFFmpeg = ff;
-  onLog("[init] FFmpeg ready");
-  onProgress(0.05);
+  reportLog("[init] FFmpeg ready");
+  reportProgress(0.05);
 
-  const logHandler = ({ message }: { message: string }) => onLog(`[ffmpeg] ${message}`);
+  const logHandler = ({ message }: { message: string }) => reportLog(`[ffmpeg] ${message}`);
   ff.on("log", logHandler);
 
   const ext = file.name.match(/\.[a-zA-Z0-9]+$/)?.[0] || ".mp4";
@@ -94,18 +118,21 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
   const outputName = format === "WEBM" ? "output.webm" : "output.mp4";
 
   try {
-    await ff.writeFile(inputName, await fetchFile(file));
-    onLog(`[input] loaded ${prettyBytes(file.size)}`);
-    onProgress(0.1);
+    const inputData = await fetchFile(file);
+    throwIfCancelled();
+    await ff.writeFile(inputName, inputData);
+    throwIfCancelled();
+    reportLog(`[input] loaded ${prettyBytes(file.size)}`);
+    reportProgress(0.1);
 
     const filters: string[] = [];
     if (crop) {
       const px = cropPixels(crop, videoWidth, videoHeight);
       const cropFilter = `crop=${px.w}:${px.h}:${px.x}:${px.y}`;
       filters.push(cropFilter);
-      onLog(`[crop] ${cropFilter} (from ${videoWidth}x${videoHeight})`);
+      reportLog(`[crop] ${cropFilter} (from ${videoWidth}x${videoHeight})`);
     } else {
-      onLog("[crop] disabled");
+      reportLog("[crop] disabled");
     }
 
     if (speed !== 1 && speed > 0) {
@@ -146,13 +173,13 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
     const ceilingBitrate = hasSizeLimit ? targetBitrate(maxSizeMB * overhead, trimmedDuration, aBitrate) : null;
 
     if (ceilingBitrate !== null) {
-      onLog(`[encode] CRF pass — crf=${crfMap[quality]} ceiling=${ceilingBitrate}k audio=${aBitrate}k`);
+      reportLog(`[encode] CRF pass — crf=${crfMap[quality]} ceiling=${ceilingBitrate}k audio=${aBitrate}k`);
     } else {
-      onLog(`[encode] CRF pass — crf=${crfMap[quality]} size limit=disabled audio=${aBitrate}k`);
+      reportLog(`[encode] CRF pass — crf=${crfMap[quality]} size limit=disabled audio=${aBitrate}k`);
     }
 
     const pass1handler = ({ progress: p }: { progress: number }) => {
-      onProgress(0.1 + Math.min(p, 1) * 0.45);
+      reportProgress(0.1 + Math.min(p, 1) * 0.45);
     };
     ff.on("progress", pass1handler);
 
@@ -178,8 +205,10 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
           "-y",
           outputName,
         ];
-        onLog(`[run] ffmpeg ${args1.join(" ")}`);
+        reportLog(`[run] ffmpeg ${args1.join(" ")}`);
+        throwIfCancelled();
         const code1 = await ff.exec(args1);
+        throwIfCancelled();
         if (code1 !== 0) throw new Error(`FFmpeg CRF pass exited with code ${code1}`);
       } else {
         const sizeArgs =
@@ -201,22 +230,26 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
           "-y",
           outputName,
         ];
-        onLog(`[run] ffmpeg ${args1.join(" ")}`);
+        reportLog(`[run] ffmpeg ${args1.join(" ")}`);
+        throwIfCancelled();
         const code1 = await ff.exec(args1);
+        throwIfCancelled();
         if (code1 !== 0) throw new Error(`FFmpeg CRF pass exited with code ${code1}`);
       }
     } finally {
       ff.off("progress", pass1handler);
     }
 
-    onProgress(0.6);
+    reportProgress(0.6);
 
+    throwIfCancelled();
     let finalData = (await ff.readFile(outputName)) as Uint8Array;
+    throwIfCancelled();
     let finalSize = finalData.byteLength;
     if (maxBytes !== null) {
-      onLog(`[size] CRF result: ${prettyBytes(finalSize)} (limit: ${prettyBytes(maxBytes)})`);
+      reportLog(`[size] CRF result: ${prettyBytes(finalSize)} (limit: ${prettyBytes(maxBytes)})`);
     } else {
-      onLog(`[size] CRF result: ${prettyBytes(finalSize)} (limit disabled)`);
+      reportLog(`[size] CRF result: ${prettyBytes(finalSize)} (limit disabled)`);
     }
 
     const maxFallbackAttempts = 2;
@@ -227,13 +260,13 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
         const ratio = maxBytes / finalSize;
         const safeRatio = Math.max(0.3, ratio * 0.95);
         currentBitrate = Math.max(50, Math.round(currentBitrate * safeRatio));
-        onLog(
+        reportLog(
           `[encode] ABR fallback ${attempt}/${maxFallbackAttempts} — video=${currentBitrate}k (ratio ${safeRatio.toFixed(2)})`,
         );
 
         const progressStart = attempt === 1 ? 0.6 : 0.75;
         const fallbackHandler = ({ progress: p }: { progress: number }) => {
-          onProgress(progressStart + Math.min(p, 1) * 0.15);
+          reportProgress(progressStart + Math.min(p, 1) * 0.15);
         };
         ff.on("progress", fallbackHandler);
 
@@ -249,8 +282,10 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
               "-y",
               outputName,
             ];
-            onLog(`[run] ffmpeg ${args.join(" ")}`);
+            reportLog(`[run] ffmpeg ${args.join(" ")}`);
+            throwIfCancelled();
             const code = await ff.exec(args);
+            throwIfCancelled();
             if (code !== 0) throw new Error(`FFmpeg fallback ${attempt} exited with code ${code}`);
           } else {
             const args = [
@@ -271,24 +306,29 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
               "-y",
               outputName,
             ];
-            onLog(`[run] ffmpeg ${args.join(" ")}`);
+            reportLog(`[run] ffmpeg ${args.join(" ")}`);
+            throwIfCancelled();
             const code = await ff.exec(args);
+            throwIfCancelled();
             if (code !== 0) throw new Error(`FFmpeg fallback ${attempt} exited with code ${code}`);
           }
         } finally {
           ff.off("progress", fallbackHandler);
         }
 
+        throwIfCancelled();
         finalData = (await ff.readFile(outputName)) as Uint8Array;
+        throwIfCancelled();
         finalSize = finalData.byteLength;
-        onLog(
+        reportLog(
           `[size] fallback ${attempt}/${maxFallbackAttempts}: ${prettyBytes(finalSize)} (limit: ${prettyBytes(maxBytes)})`,
         );
       }
     }
 
-    onProgress(0.92);
+    reportProgress(0.92);
 
+    throwIfCancelled();
     const mimeType = format === "WEBM" ? "video/webm" : "video/mp4";
     const blob = new Blob([finalData], { type: mimeType });
 
@@ -298,12 +338,12 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
       );
     }
 
-    onLog(
+    reportLog(
       maxBytes !== null
         ? `[done] output ${prettyBytes(blob.size)} / target ${prettyBytes(maxBytes)}`
         : `[done] output ${prettyBytes(blob.size)} / size limit disabled`,
     );
-    onProgress(1);
+    reportProgress(1);
     return blob;
   } finally {
     try {
@@ -315,6 +355,9 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
     ff.off("log", logHandler);
     if (runningFFmpeg === ff) {
       runningFFmpeg = null;
+    }
+    if (activeRunId === runId) {
+      activeRunId = null;
     }
   }
 }
