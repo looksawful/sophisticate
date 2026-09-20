@@ -3,6 +3,14 @@ import { describe, expect, it } from "vitest";
 import { normalizeTrimRange } from "./trimRange";
 
 describe("normalizeTrimRange", () => {
+  it("preserves ordinary valid ranges", () => {
+    expect(normalizeTrimRange(2, 7, 10)).toEqual({ start: 2, end: 7 });
+  });
+
+  it("clamps the start boundary to zero", () => {
+    expect(normalizeTrimRange(-2, 4, 10)).toEqual({ start: 0, end: 4 });
+  });
+
   it("keeps an end-edge range inside duration", () => {
     expect(normalizeTrimRange(10, 10, 10)).toEqual({ start: 9.9, end: 10 });
   });
