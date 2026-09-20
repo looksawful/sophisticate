@@ -67,4 +67,38 @@ describe("processing cancellation", () => {
     await expect(run).rejects.toThrow(/cancel/i);
     expect(state.exec).not.toHaveBeenCalled();
   });
+
+  it("cancels an active encode and never publishes a successful result", async () => {
+    const { processVideo, stopProcessing } = await import("./processVideo");
+    const run = processVideo(new File(["x"], "clip.mp4"), options());
+
+    await vi.waitFor(() => expect(state.loadResolve).toBeTypeOf("function"));
+    state.loadResolve?.();
+    await vi.waitFor(() => expect(state.exec).toHaveBeenCalledTimes(1));
+
+    stopProcessing();
+    expect(state.terminate).toHaveBeenCalledTimes(1);
+    state.execResolve?.(0);
+
+    await expect(run).rejects.toThrow(/cancel/i);
+  });
+
+  it("can start a clean run after cancelling initialization", async () => {
+    const { processVideo, stopProcessing } = await import("./processVideo");
+    const cancelled = processVideo(new File(["x"], "first.mp4"), options());
+
+    await vi.waitFor(() => expect(state.loadResolve).toBeTypeOf("function"));
+    stopProcessing();
+    state.loadResolve?.();
+    await expect(cancelled).rejects.toThrow(/cancel/i);
+
+    state.loadResolve = null;
+    const retry = processVideo(new File(["x"], "retry.mp4"), options());
+    await vi.waitFor(() => expect(state.loadResolve).toBeTypeOf("function"));
+    state.loadResolve?.();
+    await vi.waitFor(() => expect(state.exec).toHaveBeenCalledTimes(1));
+    state.execResolve?.(0);
+
+    await expect(retry).resolves.toBeInstanceOf(Blob);
+  });
 });
