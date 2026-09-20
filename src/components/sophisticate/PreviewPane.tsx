@@ -419,8 +419,9 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                         onPointerDown={handlePlayheadDown}
                       />
                       <TimelineTrimHandles
-                        startPercent={trimStartPercent}
-                        endPercent={trimEndPercent}
+                        duration={c.videoDuration}
+                        trimStart={c.trimStart}
+                        trimEnd={c.trimEnd}
                         onStartPointerDown={handleStartHandleDown}
                         onEndPointerDown={handleEndHandleDown}
                       />
