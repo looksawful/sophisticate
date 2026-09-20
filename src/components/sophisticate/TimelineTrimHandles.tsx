@@ -17,9 +17,11 @@ export function TimelineTrimHandles({
   onStartPointerDown,
   onEndPointerDown,
 }: TimelineTrimHandlesProps) {
-  const timelineMax = Math.max(duration, 0.1);
-  const startPercent = (Math.max(0, Math.min(trimStart, timelineMax)) / timelineMax) * 100;
-  const endPercent = (Math.max(0, Math.min(trimEnd, timelineMax)) / timelineMax) * 100;
+  const timelineMax = Number.isFinite(duration) && duration > 0 ? duration : 0.1;
+  const safeStart = Number.isFinite(trimStart) ? trimStart : 0;
+  const safeEnd = Number.isFinite(trimEnd) ? trimEnd : timelineMax;
+  const startPercent = (Math.max(0, Math.min(safeStart, timelineMax)) / timelineMax) * 100;
+  const endPercent = (Math.max(0, Math.min(safeEnd, timelineMax)) / timelineMax) * 100;
 
   return (
     <>
