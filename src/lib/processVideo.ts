@@ -92,8 +92,6 @@ export async function processVideo(file: File, options: ProcessOptions): Promise
     videoWidth,
     videoHeight,
     duration,
-    onLog,
-    onProgress,
     trimStart,
     trimEnd,
     speed = 1,
