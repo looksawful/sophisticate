@@ -37,9 +37,9 @@ export function usePlaybackState(getPreviewVideo: () => HTMLVideoElement | null)
   );
 
   const resetTrimRange = useCallback(() => {
-    const max = Math.max(0, videoDuration || 0);
-    setTrimStart(0);
-    setTrimEnd(max);
+    const range = normalizeTrimRange(0, videoDuration, videoDuration);
+    setTrimStart(range.start);
+    setTrimEnd(range.end);
     seekPreview(0);
   }, [seekPreview, videoDuration]);
 
