@@ -12,6 +12,7 @@ import { hoverLift, riseVariants } from "./config";
 import { Button, getButtonClass } from "./controls";
 import { controllerEqual } from "./memoHelpers";
 import { TimelineTrimHandles } from "./TimelineTrimHandles";
+import { getTimelineValues } from "./timelineValues";
 import { Tooltip } from "./Tooltip";
 import { ui } from "./ui";
 import type { SophisticateController } from "./useSophisticateController";
@@ -36,10 +37,12 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
     return "Drop a video here";
   }, [isDragActive, isDragReject]);
 
-  const timelineMax = Math.max(c.videoDuration, 0.1);
-  const trimStartPercent = (Math.max(0, Math.min(c.trimStart, timelineMax)) / timelineMax) * 100;
-  const trimEndPercent = (Math.max(0, Math.min(c.trimEnd, timelineMax)) / timelineMax) * 100;
-  const playheadPercent = (Math.max(0, Math.min(c.currentTime, timelineMax)) / timelineMax) * 100;
+  const { timelineMax, trimStartPercent, trimEndPercent, playheadPercent } = getTimelineValues(
+    c.videoDuration,
+    c.trimStart,
+    c.trimEnd,
+    c.currentTime,
+  );
   const playedTrimStartPercent = trimStartPercent;
   const playedTrimEndPercent = Math.max(trimStartPercent, Math.min(playheadPercent, trimEndPercent));
 
