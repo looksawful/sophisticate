@@ -11,7 +11,7 @@ import "react-easy-crop/react-easy-crop.css";
 import { hoverLift, riseVariants } from "./config";
 import { Button, getButtonClass } from "./controls";
 import { controllerEqual } from "./memoHelpers";
-import { Tooltip } from "./Tooltip";
+import { TimelineTrimHandles } from "./TimelineTrimHandles";\nimport { Tooltip } from "./Tooltip";
 import { ui } from "./ui";
 import type { SophisticateController } from "./useSophisticateController";
 
@@ -418,15 +418,11 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                         style={{ left: `${playheadPercent}%` }}
                         onPointerDown={handlePlayheadDown}
                       />
-                      <div
-                        className="absolute top-1/2 z-30 h-9 w-2 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-zinc-400/90 hover:bg-pink-400 hover:scale-110 transition pointer-events-auto cursor-ew-resize"
-                        style={{ left: `${trimStartPercent}%` }}
-                        onPointerDown={handleStartHandleDown}
-                      />
-                      <div
-                        className="absolute top-1/2 z-30 h-9 w-2 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-zinc-400/90 hover:bg-pink-400 hover:scale-110 transition pointer-events-auto cursor-ew-resize"
-                        style={{ left: `${trimEndPercent}%` }}
-                        onPointerDown={handleEndHandleDown}
+                      <TimelineTrimHandles
+                        startPercent={trimStartPercent}
+                        endPercent={trimEndPercent}
+                        onStartPointerDown={handleStartHandleDown}
+                        onEndPointerDown={handleEndHandleDown}
                       />
                     </div>
 
