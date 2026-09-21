@@ -14,7 +14,7 @@ class ProcessingCancelledError extends Error {
   }
 }
 
-function buildAtempoFilters(speed: number): string[] {
+export function buildAtempoFilters(speed: number): string[] {
   if (!(speed > 0) || speed === 1) return [];
   const filters: string[] = [];
   let remaining = speed;

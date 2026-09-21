@@ -11,6 +11,8 @@ import "react-easy-crop/react-easy-crop.css";
 import { hoverLift, riseVariants } from "./config";
 import { Button, getButtonClass } from "./controls";
 import { controllerEqual } from "./memoHelpers";
+import { TimelineTrimHandles } from "./TimelineTrimHandles";
+import { getTimelineValues } from "./timelineValues";
 import { Tooltip } from "./Tooltip";
 import { ui } from "./ui";
 import type { SophisticateController } from "./useSophisticateController";
@@ -35,10 +37,12 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
     return "Drop a video here";
   }, [isDragActive, isDragReject]);
 
-  const timelineMax = Math.max(c.videoDuration, 0.1);
-  const trimStartPercent = (Math.max(0, Math.min(c.trimStart, timelineMax)) / timelineMax) * 100;
-  const trimEndPercent = (Math.max(0, Math.min(c.trimEnd, timelineMax)) / timelineMax) * 100;
-  const playheadPercent = (Math.max(0, Math.min(c.currentTime, timelineMax)) / timelineMax) * 100;
+  const { timelineMax, trimStartPercent, trimEndPercent, playheadPercent } = getTimelineValues(
+    c.videoDuration,
+    c.trimStart,
+    c.trimEnd,
+    c.currentTime,
+  );
   const playedTrimStartPercent = trimStartPercent;
   const playedTrimEndPercent = Math.max(trimStartPercent, Math.min(playheadPercent, trimEndPercent));
 
@@ -418,15 +422,12 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                         style={{ left: `${playheadPercent}%` }}
                         onPointerDown={handlePlayheadDown}
                       />
-                      <div
-                        className="absolute top-1/2 z-30 h-9 w-2 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-zinc-400/90 hover:bg-pink-400 hover:scale-110 transition pointer-events-auto cursor-ew-resize"
-                        style={{ left: `${trimStartPercent}%` }}
-                        onPointerDown={handleStartHandleDown}
-                      />
-                      <div
-                        className="absolute top-1/2 z-30 h-9 w-2 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-zinc-400/90 hover:bg-pink-400 hover:scale-110 transition pointer-events-auto cursor-ew-resize"
-                        style={{ left: `${trimEndPercent}%` }}
-                        onPointerDown={handleEndHandleDown}
+                      <TimelineTrimHandles
+                        duration={c.videoDuration}
+                        trimStart={c.trimStart}
+                        trimEnd={c.trimEnd}
+                        onStartPointerDown={handleStartHandleDown}
+                        onEndPointerDown={handleEndHandleDown}
                       />
                     </div>
 

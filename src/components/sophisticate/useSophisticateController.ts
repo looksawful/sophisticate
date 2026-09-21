@@ -7,6 +7,7 @@ import { auroraSignal } from "../auroraSignal";
 import { ASPECT_PRESETS } from "./config";
 import { useCropState } from "./hooks/useCropState";
 import { useLogState } from "./hooks/useLogState";
+import { normalizeTrimRange } from "./hooks/trimRange";
 import { usePlaybackState } from "./hooks/usePlaybackState";
 
 export function useSophisticateController() {
@@ -208,10 +209,11 @@ export function useSophisticateController() {
 
       setVideoDims({ w, h });
       const duration = videoEl?.duration || 0;
+      const trimRange = normalizeTrimRange(0, duration, duration);
       setVideoDuration(duration);
       setCurrentTime(0);
-      setTrimStart(0);
-      setTrimEnd(duration);
+      setTrimStart(trimRange.start);
+      setTrimEnd(trimRange.end);
       addLog(`[meta] ${w}x${h}, ${duration.toFixed(1)}s`);
 
       const preset = ASPECT_PRESETS.find((p) => p.label === activePreset) ?? ASPECT_PRESETS[0];
