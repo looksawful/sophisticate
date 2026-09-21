@@ -19,6 +19,7 @@ const read = (file: string, dir = COMP_DIR) => fs.readFileSync(path.join(dir, fi
 
 const sidebarSrc = read("SidebarControls.tsx");
 const previewSrc = read("PreviewPane.tsx");
+const trimHandlesSrc = read("TimelineTrimHandles.tsx");
 const viewSrc = read("SophisticatePreviewView.tsx");
 const footerSrc = read("AppFooter.tsx");
 const logPanelSrc = read("LogPanel.tsx");
@@ -53,7 +54,7 @@ describe("P2: Trim handle usability", () => {
   });
 
   it("AFTER: trim handles have hover feedback", () => {
-    expect(previewSrc).toMatch(/hover:bg-pink|hover:scale/);
+    expect(trimHandlesSrc).toMatch(/hover:bg-pink|hover:scale/);
   });
 });
 
