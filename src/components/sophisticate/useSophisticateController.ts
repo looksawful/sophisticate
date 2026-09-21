@@ -1,5 +1,6 @@
 "use client";
 
+import { validateProcessingRequest } from "@/lib/processingRequest";
 import { cropPixels, prettyBytes } from "@/lib/videoUtils";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -242,6 +243,21 @@ export function useSophisticateController() {
       return;
     }
 
+    let validatedRequest;
+    try {
+      validatedRequest = validateProcessingRequest({
+        duration: videoDuration,
+        videoWidth: videoDims.w,
+        videoHeight: videoDims.h,
+        sizeLimitEnabled,
+        maxSize,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      addLog(`[error] ${msg}`);
+      return;
+    }
+
     setProcessing(true);
     auroraSignal.paused = true;
     cancelRequestedRef.current = false;
@@ -265,11 +281,11 @@ export function useSophisticateController() {
       const { processVideo } = await import("@/lib/processVideo");
       const blob = await processVideo(fileRef.current, {
         crop: effectiveCrop,
-        maxSizeMB: sizeLimitEnabled ? parseFloat(maxSize) || 0.49 : undefined,
+        maxSizeMB: validatedRequest.maxSizeMB,
         format,
-        videoWidth: videoDims.w,
-        videoHeight: videoDims.h,
-        duration: videoDuration || 1,
+        videoWidth: validatedRequest.videoWidth,
+        videoHeight: validatedRequest.videoHeight,
+        duration: validatedRequest.duration,
         onLog: addLog,
         onProgress: setProgress,
         trimStart: trimStart > 0 ? trimStart : undefined,
