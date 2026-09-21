@@ -32,14 +32,23 @@ export function buildAtempoFilters(speed: number): string[] {
   return filters;
 }
 
+export function buildFFmpegRuntimeURLs(basePath = "") {
+  const base = basePath.replace(/\/$/, "");
+  return {
+    coreURL: `${base}/ffmpeg-core/ffmpeg-core.js`,
+    wasmURL: `${base}/ffmpeg-core/ffmpeg-core.wasm`,
+    classWorkerURL: `${base}/ffmpeg-worker/worker.js`,
+  };
+}
+
 async function getFFmpeg(): Promise<FFmpeg> {
   if (ffmpegInstance?.loaded) return ffmpegInstance;
   const ff = new FFmpeg();
-  const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
-  const baseURL = `${basePath}/ffmpeg-core`;
+  const urls = buildFFmpegRuntimeURLs(process.env.NEXT_PUBLIC_BASE_PATH ?? "");
   await ff.load({
-    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+    coreURL: await toBlobURL(urls.coreURL, "text/javascript"),
+    wasmURL: await toBlobURL(urls.wasmURL, "application/wasm"),
+    classWorkerURL: urls.classWorkerURL,
   });
   ffmpegInstance = ff;
   return ff;
