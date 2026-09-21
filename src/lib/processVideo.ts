@@ -5,7 +5,7 @@ import { type Crop, cropPixels, prettyBytes, targetBitrate } from "./videoUtils"
 let ffmpegInstance: FFmpeg | null = null;
 let runningFFmpeg: FFmpeg | null = null;
 
-function buildAtempoFilters(speed: number): string[] {
+export function buildAtempoFilters(speed: number): string[] {
   if (!(speed > 0) || speed === 1) return [];
   const filters: string[] = [];
   let remaining = speed;
