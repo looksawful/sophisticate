@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, expect, it } from "vitest";
+import { buildFFmpegRuntimeURLs } from "./processVideo";
 
 const source = fs.readFileSync(path.resolve(__dirname, "processVideo.ts"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../package.json"), "utf8")) as {
@@ -17,8 +18,19 @@ describe("FFmpeg runtime ownership", () => {
     expect(source).not.toContain("jsdelivr.net");
   });
 
-  it("loads the runtime from the exported project base path", () => {
-    expect(source).toContain("NEXT_PUBLIC_BASE_PATH");
-    expect(source).toContain("/ffmpeg-core");
+  it("builds local core and class-worker URLs from the exported base path", () => {
+    expect(buildFFmpegRuntimeURLs("/sophisticate/")).toEqual({
+      coreURL: "/sophisticate/ffmpeg-core/ffmpeg-core.js",
+      wasmURL: "/sophisticate/ffmpeg-core/ffmpeg-core.wasm",
+      classWorkerURL: "/sophisticate/ffmpeg-worker/worker.js",
+    });
+  });
+
+  it("keeps runtime URLs root-relative without a base path", () => {
+    expect(buildFFmpegRuntimeURLs("")).toEqual({
+      coreURL: "/ffmpeg-core/ffmpeg-core.js",
+      wasmURL: "/ffmpeg-core/ffmpeg-core.wasm",
+      classWorkerURL: "/ffmpeg-worker/worker.js",
+    });
   });
 });
