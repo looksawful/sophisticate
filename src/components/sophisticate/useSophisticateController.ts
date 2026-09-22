@@ -264,6 +264,11 @@ export function useSophisticateController() {
         videoHeight: videoDims.h,
         sizeLimitEnabled,
         maxSize,
+        includeAudio,
+        trimStart,
+        trimEnd: trimEnd > 0 && trimEnd < videoDuration ? trimEnd : undefined,
+        speed,
+        loop: loopEnabled ? 2 : 1,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
