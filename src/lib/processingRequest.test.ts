@@ -31,6 +31,43 @@ describe("validateProcessingRequest", () => {
     expect(validateProcessingRequest({ ...valid, sizeLimitEnabled: false, maxSize: "nonsense" }).maxSizeMB).toBeUndefined();
   });
 
+  it("rejects a size target that cannot fit minimum video plus audio bitrate", () => {
+    expect(() =>
+      validateProcessingRequest({
+        ...valid,
+        duration: 12,
+        maxSize: "0.1",
+        includeAudio: true,
+      }),
+    ).toThrow(/increase.*limit|disable audio/i);
+  });
+
+  it("allows the same small target when disabling audio makes it feasible", () => {
+    expect(
+      validateProcessingRequest({
+        ...valid,
+        duration: 12,
+        maxSize: "0.1",
+        includeAudio: false,
+      }).maxSizeMB,
+    ).toBe(0.1);
+  });
+
+  it("uses trimmed duration, speed, and repetition for size feasibility", () => {
+    expect(
+      validateProcessingRequest({
+        ...valid,
+        duration: 12,
+        maxSize: "0.1",
+        includeAudio: true,
+        trimStart: 5,
+        trimEnd: 6,
+        speed: 2,
+        loop: 1,
+      }).maxSizeMB,
+    ).toBe(0.1);
+  });
+
   it("returns explicit numeric values for a valid request", () => {
     expect(validateProcessingRequest(valid)).toEqual({
       duration: 12,
