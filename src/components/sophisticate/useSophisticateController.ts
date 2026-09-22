@@ -1,5 +1,6 @@
 "use client";
 
+import { getUnsupportedVideoMessage, isSupportedVideoFile } from "@/lib/mediaInput";
 import { validateProcessingRequest } from "@/lib/processingRequest";
 import { cropPixels, prettyBytes } from "@/lib/videoUtils";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -20,6 +21,7 @@ export function useSophisticateController() {
   const [fileName, setFileName] = useState("");
   const [fileMeta, setFileMeta] = useState({ size: 0, type: "" });
   const [fileUrl, setFileUrl] = useState("");
+  const [validationError, setValidationError] = useState("");
   const fileUrlRef = useRef("");
   const fileRef = useRef<File | null>(null);
 
@@ -120,6 +122,14 @@ export function useSophisticateController() {
   // --- File management ---
   const setFile = useCallback(
     (file: File) => {
+      if (!isSupportedVideoFile(file)) {
+        const message = getUnsupportedVideoMessage();
+        setValidationError(message);
+        addLog(`[error] ${message}`);
+        return false;
+      }
+
+      setValidationError("");
       setFileName(file.name);
       setFileMeta({ size: file.size, type: file.type || "" });
       addLog(`[input] file: ${file.name} (${prettyBytes(file.size)})`);
@@ -141,6 +151,7 @@ export function useSophisticateController() {
       setZoom(1);
       resetPlayback();
       setShowCirclePreview(false);
+      return true;
     },
     [addLog, resetPlayback, setCrop, setShowCirclePreview, setUiCrop, setZoom],
   );
@@ -148,6 +159,7 @@ export function useSophisticateController() {
   const clearAll = useCallback(() => {
     setFileName("");
     setFileMeta({ size: 0, type: "" });
+    setValidationError("");
     setProgress(0);
     resetLogs();
     resetCrop();
@@ -190,8 +202,7 @@ export function useSophisticateController() {
         if (item.kind !== "file") continue;
         const file = item.getAsFile();
         if (!file) continue;
-        setFile(file);
-        addLog("[input] pasted file from clipboard");
+        if (setFile(file)) addLog("[input] pasted file from clipboard");
         break;
       }
     },
@@ -239,7 +250,9 @@ export function useSophisticateController() {
     if (!fileName || !fileRef.current) return;
 
     if (videoDims.w <= 0 || videoDims.h <= 0) {
-      addLog("[error] video metadata not loaded");
+      const message = "Video metadata is not loaded yet.";
+      setValidationError(message);
+      addLog(`[error] ${message}`);
       return;
     }
 
@@ -254,10 +267,12 @@ export function useSophisticateController() {
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      setValidationError(msg);
       addLog(`[error] ${msg}`);
       return;
     }
 
+    setValidationError("");
     setProcessing(true);
     auroraSignal.paused = true;
     cancelRequestedRef.current = false;
@@ -428,6 +443,7 @@ export function useSophisticateController() {
     logsEndRef,
     fileUrl,
     fileName,
+    validationError,
     maxSize,
     format,
     crop,
