@@ -69,8 +69,10 @@ const page = await browser.newPage();
 const pageErrors = [];
 const consoleErrors = [];
 const runtimeRequests = [];
+const workerUrls = [];
 const failedRequests = [];
 page.on("pageerror", (error) => pageErrors.push(String(error)));
+page.on("worker", (worker) => workerUrls.push(worker.url()));
 page.on("console", (msg) => {
   if (msg.type() === "error") consoleErrors.push(msg.text());
 });
@@ -114,7 +116,7 @@ try {
   const download = page.getByRole("button", { name: /Download/i });
   if (!(await download.isEnabled())) throw new Error("Download button is not enabled after encode");
 
-  const required = ["ffmpeg-worker/worker.js", "ffmpeg-core/ffmpeg-core.js", "ffmpeg-core/ffmpeg-core.wasm"];
+  const required = ["ffmpeg-core/ffmpeg-core.js", "ffmpeg-core/ffmpeg-core.wasm"];
   for (const needle of required) {
     const hit = runtimeRequests.find((r) => r.url.includes(needle) && r.status >= 200 && r.status < 400);
     if (!hit) throw new Error(`Missing successful local runtime request for ${needle}\n${JSON.stringify(runtimeRequests, null, 2)}`);
@@ -131,6 +133,7 @@ try {
     route,
     fixture: { name: "test-320x240-3s.mp4", size: statSync(fixture).size },
     runtimeRequests,
+    workerUrls,
   }, null, 2));
 } catch (error) {
   console.error("SMOKE_DIAGNOSTICS", JSON.stringify({
@@ -139,6 +142,7 @@ try {
     consoleErrors,
     failedRequests,
     runtimeRequests,
+    workerUrls,
     bodyText: (await page.locator("body").innerText().catch(() => "")).slice(-12000),
   }, null, 2));
   throw error;
