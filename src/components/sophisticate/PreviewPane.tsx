@@ -1,5 +1,6 @@
 "use client";
 
+import { getUnsupportedVideoMessage, isSupportedVideoFile } from "@/lib/mediaInput";
 import { prettyBytes } from "@/lib/videoUtils";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Circle, Download, Pause, Play, Repeat, Square, Upload, Volume2, VolumeX } from "lucide-react";
@@ -25,10 +26,16 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
   const [circleFrame, setCircleFrame] = useState<{ left: number; top: number; size: number } | null>(null);
 
   const { getRootProps, getInputProps, isDragActive, isDragReject, open } = useDropzone({
-    accept: { "video/*": [] },
     multiple: false,
     noClick: true,
-    onDropAccepted: c.handleDropFiles,
+    validator: (file) =>
+      isSupportedVideoFile(file)
+        ? null
+        : { code: "file-invalid-type", message: getUnsupportedVideoMessage() },
+    onDrop: (acceptedFiles, rejectedFiles) => {
+      const file = acceptedFiles[0] ?? rejectedFiles[0]?.file;
+      if (file) c.handleDropFiles([file]);
+    },
   });
 
   const dropHint = useMemo(() => {
