@@ -69,6 +69,7 @@ const page = await browser.newPage();
 const pageErrors = [];
 const consoleErrors = [];
 const runtimeRequests = [];
+const failedRequests = [];
 page.on("pageerror", (error) => pageErrors.push(String(error)));
 page.on("console", (msg) => {
   if (msg.type() === "error") consoleErrors.push(msg.text());
@@ -78,6 +79,9 @@ page.on("response", (response) => {
   if (/ffmpeg-(?:worker|core)|\.wasm(?:\?|$)/.test(u)) {
     runtimeRequests.push({ url: u, status: response.status() });
   }
+});
+page.on("requestfailed", (request) => {
+  failedRequests.push({ url: request.url(), error: request.failure()?.errorText || "unknown" });
 });
 
 try {
@@ -128,6 +132,16 @@ try {
     fixture: { name: "test-320x240-3s.mp4", size: statSync(fixture).size },
     runtimeRequests,
   }, null, 2));
+} catch (error) {
+  console.error("SMOKE_DIAGNOSTICS", JSON.stringify({
+    error: error instanceof Error ? error.stack || error.message : String(error),
+    pageErrors,
+    consoleErrors,
+    failedRequests,
+    runtimeRequests,
+    bodyText: (await page.locator("body").innerText().catch(() => "")).slice(-12000),
+  }, null, 2));
+  throw error;
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
