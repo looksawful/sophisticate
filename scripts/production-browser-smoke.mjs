@@ -10,8 +10,8 @@ const fixture = join(root, "test-fixtures", "test-320x240-3s.mp4");
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "/sophisticate";
 const route = `${basePath.replace(/\/$/, "")}/`;
 
-if (!existsSync(join(outDir, route.replace(/^\//, ""), "index.html"))) {
-  throw new Error(`Production export missing route ${route}`);
+if (!existsSync(join(outDir, "index.html"))) {
+  throw new Error("Production export missing out/index.html");
 }
 if (!existsSync(fixture)) throw new Error(`Fixture missing: ${fixture}`);
 
@@ -29,6 +29,10 @@ const mime = {
 const server = createServer((req, res) => {
   const url = new URL(req.url || "/", "http://127.0.0.1");
   let pathname = decodeURIComponent(url.pathname);
+  const normalizedBase = basePath.replace(/\/$/, "");
+  if (normalizedBase && pathname.startsWith(normalizedBase)) {
+    pathname = pathname.slice(normalizedBase.length) || "/";
+  }
   if (pathname.endsWith("/")) pathname += "index.html";
   const safe = normalize(pathname).replace(/^(\.\.(\/|\\|$))+/, "");
   const file = join(outDir, safe.replace(/^[/\\]+/, ""));
