@@ -22,7 +22,13 @@ export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
       animate="animate"
     >
       <div className="mx-auto max-w-[1500px] px-5 sm:px-7 py-5 sm:py-6 min-h-screen flex flex-col">
-        <input ref={c.inputRef} type="file" accept="video/*" onChange={c.handlePick} className="hidden" />
+        <input
+          ref={c.inputRef}
+          type="file"
+          accept="video/*,.mp4,.m4v,.mov,.webm"
+          onChange={c.handlePick}
+          className="hidden"
+        />
 
         <div className="flex-1 flex flex-col">
           <motion.div variants={fadeVariants} className="flex items-center justify-end gap-4 mb-4">
@@ -30,6 +36,15 @@ export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
               {c.fileBadge}
             </div>
           </motion.div>
+
+          {c.validationError && (
+            <div
+              role="alert"
+              className="mb-4 rounded-xl border border-red-500/40 bg-red-950/35 px-4 py-3 text-sm text-red-200"
+            >
+              {c.validationError}
+            </div>
+          )}
 
           <AnimatePresence>
             {c.processing && <ProcessingOverlay progress={c.progress} prefersReducedMotion={!!prefersReducedMotion} />}
