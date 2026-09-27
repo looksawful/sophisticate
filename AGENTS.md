@@ -39,3 +39,17 @@
 
 - Avoid destructive history operations and force pushes as cleanup shortcuts.
 - Do not merge or deploy merely because CI is green; review the actual diff, runtime risk, and required browser evidence first.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues for this repository. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default Matt triage vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout. See `docs/agents/domain.md`.
