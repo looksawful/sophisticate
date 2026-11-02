@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { auroraSignal } from "./auroraSignal";
+import { getAuroraMode } from "./auroraMode";
 
 const vertexSource = `
 attribute vec2 aPosition;
@@ -147,24 +148,49 @@ export default function AuroraBackground() {
     let rafId = 0;
     let lastFrame = performance.now();
     let time = 0;
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    const render = (now: number) => {
-      rafId = window.requestAnimationFrame(render);
-      if (auroraSignal.paused) return;
-      if (now - lastFrame < frameInterval) return;
-      const delta = now - lastFrame;
-      lastFrame = now;
-      time += delta / 1000;
+    const draw = () => {
       if (timeLocation) gl.uniform1f(timeLocation, time);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
 
-    rafId = window.requestAnimationFrame(render);
+    const render = (now: number) => {
+      rafId = 0;
+      if (getAuroraMode(motionPreference.matches, document.hidden) !== "animate") return;
+      rafId = window.requestAnimationFrame(render);
+      if (auroraSignal.paused || now - lastFrame < frameInterval) return;
+      const delta = now - lastFrame;
+      lastFrame = now;
+      time += delta / 1000;
+      draw();
+    };
+
+    const syncPlayback = () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      rafId = 0;
+      const mode = getAuroraMode(motionPreference.matches, document.hidden);
+      if (mode === "static") draw();
+      if (mode === "animate") {
+        lastFrame = performance.now();
+        rafId = window.requestAnimationFrame(render);
+      }
+    };
+
+    const onVisibilityChange = () => syncPlayback();
+    const onMotionPreferenceChange = () => syncPlayback();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    motionPreference.addEventListener("change", onMotionPreferenceChange);
+    window.addEventListener("resize", syncPlayback);
+    syncPlayback();
 
     return () => {
       window.cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", syncPlayback);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      motionPreference.removeEventListener("change", onMotionPreferenceChange);
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
       gl.deleteShader(vertexShader);

@@ -8,10 +8,12 @@ import { LogPanel } from "./LogPanel";
 import { PreviewPane } from "./PreviewPane";
 import { ProcessingOverlay } from "./ProcessingOverlay";
 import { SidebarControls } from "./SidebarControls";
+import { getUserStatus } from "./userStatus";
 import type { SophisticateController } from "./useSophisticateController";
 
 export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
   const prefersReducedMotion = useReducedMotion();
+  const { status, error } = getUserStatus(c.processing, Boolean(c.showResult && c.resultUrl), c.logs);
 
   return (
     <motion.div
@@ -26,6 +28,12 @@ export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
 
         <main className="flex-1 flex flex-col">
           <h1 className="sr-only">Sophisticate video editor</h1>
+          <div role="status" aria-live="polite" className="sr-only">{status}</div>
+          {error && (
+            <div role="alert" className="mb-4 rounded-xl border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-100">
+              {error}
+            </div>
+          )}
           <motion.div variants={fadeVariants} className="flex items-center justify-end gap-4 mb-4">
             <div className="text-base text-zinc-300">
               {c.fileBadge}
