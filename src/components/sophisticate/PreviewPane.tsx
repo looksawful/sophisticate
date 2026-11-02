@@ -28,6 +28,7 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
     accept: { "video/*": [] },
     multiple: false,
     noClick: true,
+    noKeyboard: true,
     onDropAccepted: c.handleDropFiles,
   });
 
