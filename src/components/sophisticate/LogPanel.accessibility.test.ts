@@ -22,6 +22,6 @@ describe("processing log accessible names", () => {
     expect(html).toContain('aria-label="Search processing logs"');
     expect(html).toContain('for="processing-log-search"');
     expect(html).toContain('id="processing-log-search"');
-    expect(html).toContain(">Search logs</label>");
+    expect(html).toContain(">Search processing logs</label>");
   });
 });
