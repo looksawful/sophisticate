@@ -111,9 +111,6 @@ try {
 
   const trimStart = page.getByRole("slider", { name: "Trim start" });
   const trimEnd = page.getByRole("slider", { name: "Trim end" });
-  if ((await trimStart.count()) !== 1 || (await trimEnd.count()) !== 1) {
-    throw new Error("Missing keyboard-accessible trim handles");
-  }
   // Media dimensions may arrive before duration; require an actually interactive timeline.
   try {
     await trimStart.waitFor({ state: "visible", timeout: 30_000 });
