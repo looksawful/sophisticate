@@ -2,8 +2,8 @@ name: Production browser smoke
 
 on:
   push:
-    branches:
-      - fix/windows-ffmpeg-worker-23
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -32,9 +32,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install pinned smoke driver
-        run: npm install --no-save --package-lock=false playwright-core@1.55.0
-
       - name: Install FFmpeg on Ubuntu
         if: runner.os == 'Linux'
         run: |
@@ -55,6 +52,9 @@ jobs:
 
       - name: Build production export
         run: npm run build
+
+      - name: Install pinned smoke driver
+        run: npm install --no-save --package-lock=false playwright-core@1.55.0
 
       - name: Run real Chrome production smoke
         run: node scripts/production-browser-smoke.mjs
