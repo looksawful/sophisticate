@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { auroraSignal } from "../auroraSignal";
 import { ASPECT_PRESETS } from "./config";
+import { decideEditorShortcut } from "./editorShortcuts";
 import { useCropState } from "./hooks/useCropState";
 import { useLogState } from "./hooks/useLogState";
 import { normalizeTrimRange } from "./hooks/trimRange";
@@ -344,25 +345,39 @@ export function useSophisticateController() {
   // --- Keyboard shortcuts ---
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const isEditableTarget =
-        e.target instanceof HTMLElement &&
-        (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable);
+      if (e.defaultPrevented || e.isComposing) return;
 
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") {
+      const interactiveTarget =
+        e.target instanceof Element &&
+        !!e.target.closest('a, button, input, textarea, select, summary, [role="slider"], [contenteditable="true"]');
+      const action = decideEditorShortcut({
+        key: e.key,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        altKey: e.altKey,
+        shiftKey: e.shiftKey,
+        repeat: e.repeat,
+        interactiveTarget,
+        canOpen: !processing,
+        canConvert,
+        canClear: !!fileName && !processing,
+      });
+
+      if (action === "open") {
         e.preventDefault();
         inputRef.current?.click();
-      }
-      if (e.key === "Enter" && canConvert && !isEditableTarget) {
-        realProcess();
-      }
-      if (e.key === "Escape" && !isEditableTarget) {
+      } else if (action === "process") {
+        e.preventDefault();
+        void realProcess();
+      } else if (action === "clear") {
+        e.preventDefault();
         clearAll();
       }
     };
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [canConvert, clearAll, realProcess]);
+  }, [canConvert, clearAll, fileName, processing, realProcess]);
 
   // --- Cleanup ---
   useEffect(() => {
