@@ -34,6 +34,12 @@ describe("global keyboard shortcuts", () => {
     expect(getAppShortcut(event("O", { metaKey: true, target: interactive }), false)).toBe("open");
   });
 
+  it("disables editor shortcuts during an active export", () => {
+    expect(getAppShortcut(event("Escape"), false, true)).toBeNull();
+    expect(getAppShortcut(event("o", { ctrlKey: true }), false, true)).toBeNull();
+    expect(getAppShortcut(event("Enter"), true, true)).toBeNull();
+  });
+
   it("ignores repeated, prevented and modifier keypresses", () => {
     expect(getAppShortcut(event("Enter", { repeat: true }), true)).toBeNull();
     expect(getAppShortcut(event("Enter", { defaultPrevented: true }), true)).toBeNull();
