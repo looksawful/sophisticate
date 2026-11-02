@@ -123,41 +123,51 @@ try {
   // QA-only integration assertions for accessibility PRs 36–38.
   const qaChecks = [];
 
-  // Temporary integration QA, kept on the existing verification branch only.
+  // QA-only: one atomic viewport/scroll/hit-test read to avoid focus-scroll races.
   const checkToolbar = async (state) => {
     for (const width of [320, 375, 390, 430, 640, 768, 1440]) {
       await page.setViewportSize({ width, height: 800 });
-      const names = state === "source"
-        ? ["Replace video", "Remove video", "Circle preview"]
-        : ["Replace video", "Remove video"];
-      const buttons = [];
-      for (const name of names) {
-        const locator = page.getByRole("button", { name: new RegExp("^" + name) });
-        await locator.scrollIntoViewIfNeeded();
-        const rect = await locator.boundingBox();
-        if (!rect) throw new Error(state + " missing " + name + " at " + width);
-        const hit = await page.evaluate(({ x, y }) => {
-          const element = document.elementFromPoint(x, y);
-          return element?.closest("button")?.textContent?.trim() || "";
-        }, { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
-        if (!hit.startsWith(name)) {
-          throw new Error(state + " " + name + " blocked by " + hit + " at " + width);
+      const snapshot = await page.evaluate((view) => {
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        const names = view === "source"
+          ? ["Replace video", "Remove video", "Circle preview"]
+          : ["Replace video", "Remove video"];
+        const controls = [...document.querySelectorAll("button")];
+        const buttons = names.map((name) => {
+          const el = controls.find((x) => x.textContent?.trim().startsWith(name));
+          if (!el) return { name, missing: true };
+          const r = el.getBoundingClientRect();
+          const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+          return { name, x: r.x, y: r.y, width: r.width, height: r.height,
+            hit: hit?.closest("button") === el, hitTag: hit?.tagName ?? null };
+        });
+        if (view === "output") {
+          const badge = [...document.querySelectorAll("div")].find(
+            (el) => el.children.length === 0 && /^Output ·/.test(el.textContent?.trim() ?? ""),
+          );
+          if (!badge) buttons.push({ name: "Output badge", missing: true });
+          else {
+            const r = badge.getBoundingClientRect();
+            buttons.push({ name: "Output badge", x: r.x, y: r.y, width: r.width, height: r.height });
+          }
         }
-        buttons.push({ name, ...rect });
+        return { scrollY, buttons };
+      }, state);
+      for (const b of snapshot.buttons) {
+        if (b.missing) throw new Error(state + " missing " + b.name + " at " + width);
+        if (b.name !== "Output badge" && !b.hit) {
+          throw new Error(state + " blocked " + b.name + " at " + width +
+            " scrollY=" + snapshot.scrollY + " rect=" + JSON.stringify(b));
+        }
       }
-      if (state === "output") {
-        const badge = page.getByText(/^Output ·/);
-        const rect = await badge.boundingBox();
-        if (!rect) throw new Error("Output badge missing at " + width);
-        buttons.push({ name: "Output badge", ...rect });
-      }
-      for (let i = 0; i < buttons.length; i++) {
-        for (let j = i + 1; j < buttons.length; j++) {
-          const a = buttons[i], b = buttons[j];
+      for (let i = 0; i < snapshot.buttons.length; i++) {
+        for (let j = i + 1; j < snapshot.buttons.length; j++) {
+          const a = snapshot.buttons[i], b = snapshot.buttons[j];
           const x = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
           const y = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
           if (x > 0 && y > 0) {
-            throw new Error(state + " overlapping " + a.name + "/" + b.name + " at " + width);
+            throw new Error(state + " overlaps " + a.name + "/" + b.name + " at " + width);
           }
         }
       }
