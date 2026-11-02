@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import process from "node:process";
@@ -85,6 +86,26 @@ page.on("response", (response) => {
 page.on("requestfailed", (request) => {
   failedRequests.push({ url: request.url(), error: request.failure()?.errorText || "unknown" });
 });
+
+const verifyDownload = async (ext) => {
+  const [download] = await Promise.all([
+    page.waitForEvent("download", { timeout: 15_000 }),
+    page.getByRole("button", { name: /Download/i }).click(),
+  ]);
+  const name = download.suggestedFilename();
+  if (!name.endsWith(`.${ext}`)) throw new Error(`Wrong download extension: ${name}`);
+  const path = await download.path();
+  if (!path) throw new Error("Download path not available");
+  const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_format", "-show_streams", "-of", "json", path], { encoding: "utf8" }));
+  if (!probe.streams?.some((stream) => stream.codec_type === "video")) {
+    throw new Error(`Downloaded ${ext} has no valid video stream`);
+  }
+  const container = probe.format?.format_name ?? "";
+  if (!(ext === "mp4" ? container.includes("mp4") : container.includes("webm"))) {
+    throw new Error(`Unexpected downloaded ${ext} container: ${container}`);
+  }
+  return { name, bytes: statSync(path).size, container };
+};
 
 try {
   await page.goto(url, { waitUntil: "networkidle", timeout: 60_000 });
@@ -178,6 +199,7 @@ try {
     throw new Error("Completed encode was not announced by live region");
   }
   qaChecks.push("completion-status");
+  const mp4Download = await verifyDownload("mp4");
 
   // Exercise the second supported output container in real Chrome.
   await page.getByRole("button", { name: "WEBM", exact: true }).click();
@@ -213,6 +235,51 @@ try {
     throw new Error("WEBM result is not downloadable");
   }
   qaChecks.push("real-webm-container-and-output-size-limit");
+  const webmDownload = await verifyDownload("webm");
+  qaChecks.push("mp4-and-webm-downloaded-and-probed");
+
+  // Verify optional stages are really omitted in the FFmpeg command, not just visually toggled.
+  await page.getByRole("button", { name: "Crop ON" }).click();
+  await page.getByRole("button", { name: "Limit ON" }).click();
+  await page.getByRole("button", { name: "MP4", exact: true }).click();
+  await processButton.click();
+  await page.waitForFunction(
+    () => document.querySelector('[role="status"]')?.textContent === "Processing video",
+    undefined,
+    { timeout: 20_000 },
+  );
+  await page.waitForFunction(
+    () => document.querySelector('[role="status"]')?.textContent === "Video ready to download",
+    undefined,
+    { timeout: 120_000 },
+  );
+  const stageLogs = await page.locator("body").innerText();
+  if (!stageLogs.includes("[crop] disabled") || !stageLogs.includes("size limit disabled")) {
+    throw new Error("Disabled crop/size stages not reflected in real processing logs");
+  }
+  if (/\[run\] ffmpeg[^\n]*\bcrop=/.test(stageLogs)) {
+    throw new Error("Disabled crop still added FFmpeg crop filter");
+  }
+  qaChecks.push("crop-and-size-disabled-omit-stages");
+
+  // Replace the result through the actual dropzone, not a programmatic picker.
+  const dataTransfer = await page.evaluateHandle((base64) => {
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([bytes], "replacement-video.mp4", { type: "video/mp4" }));
+    return transfer;
+  }, readFileSync(fixture).toString("base64"));
+  await page.locator('input[aria-label="Choose a video file"]').locator("..").dispatchEvent("drop", { dataTransfer });
+  await page.waitForFunction(
+    () => document.body.textContent?.includes("[input] file: replacement-video.mp4"),
+    undefined,
+    { timeout: 30_000 },
+  );
+  await page.locator(".result-player-shell video").waitFor({ state: "detached", timeout: 15_000 });
+  if (!(await page.getByRole("button", { name: /^Download$/ }).isDisabled())) {
+    throw new Error("Drag/drop replacement did not clear the previous result");
+  }
+  qaChecks.push("dragdrop-replacement-clears-output");
 
   const required = ["ffmpeg-core/ffmpeg-core.js", "ffmpeg-core/ffmpeg-core.wasm"];
   for (const needle of required) {
@@ -234,6 +301,8 @@ try {
     workerUrls,
     qaChecks,
     webmArtifact,
+    mp4Download,
+    webmDownload,
   }, null, 2));
 } catch (error) {
   console.error("SMOKE_DIAGNOSTICS", JSON.stringify({
