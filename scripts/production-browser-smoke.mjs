@@ -133,6 +133,7 @@ try {
       const buttons = [];
       for (const name of names) {
         const locator = page.getByRole("button", { name: new RegExp("^" + name) });
+        await locator.scrollIntoViewIfNeeded();
         const rect = await locator.boundingBox();
         if (!rect) throw new Error(state + " missing " + name + " at " + width);
         const hit = await page.evaluate(({ x, y }) => {
