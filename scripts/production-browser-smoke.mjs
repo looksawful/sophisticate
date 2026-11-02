@@ -122,6 +122,47 @@ try {
 
   // QA-only integration assertions for accessibility PRs 36–38.
   const qaChecks = [];
+
+  // Temporary integration QA, kept on the existing verification branch only.
+  const checkToolbar = async (state) => {
+    for (const width of [320, 375, 390, 430, 640, 768, 1440]) {
+      await page.setViewportSize({ width, height: 800 });
+      const names = state === "source"
+        ? ["Replace video", "Remove video", "Circle preview"]
+        : ["Replace video", "Remove video"];
+      const buttons = [];
+      for (const name of names) {
+        const locator = page.getByRole("button", { name: new RegExp("^" + name) });
+        const rect = await locator.boundingBox();
+        if (!rect) throw new Error(state + " missing " + name + " at " + width);
+        const hit = await page.evaluate(({ x, y }) => {
+          const element = document.elementFromPoint(x, y);
+          return element?.closest("button")?.textContent?.trim() || "";
+        }, { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+        if (!hit.startsWith(name)) {
+          throw new Error(state + " " + name + " blocked by " + hit + " at " + width);
+        }
+        buttons.push({ name, ...rect });
+      }
+      if (state === "output") {
+        const badge = page.getByText(/^Output ·/);
+        const rect = await badge.boundingBox();
+        if (!rect) throw new Error("Output badge missing at " + width);
+        buttons.push({ name: "Output badge", ...rect });
+      }
+      for (let i = 0; i < buttons.length; i++) {
+        for (let j = i + 1; j < buttons.length; j++) {
+          const a = buttons[i], b = buttons[j];
+          const x = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+          const y = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+          if (x > 0 && y > 0) {
+            throw new Error(state + " overlapping " + a.name + "/" + b.name + " at " + width);
+          }
+        }
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+  };
   if ((await page.getByRole("main").count()) !== 1) throw new Error("Missing main landmark");
   if ((await page.getByRole("heading", { name: "Sophisticate video editor", level: 1 }).count()) !== 1) {
     throw new Error("Missing screen-reader page heading");
@@ -130,6 +171,8 @@ try {
     throw new Error("Both file inputs must have accessible names");
   }
   qaChecks.push("semantic-main-and-upload-names");
+  await checkToolbar("source");
+  qaChecks.push("source-preview-mobile-controls");
 
   const trimStart = page.getByRole("slider", { name: "Trim start" });
   const trimEnd = page.getByRole("slider", { name: "Trim end" });
@@ -164,8 +207,18 @@ try {
   if ((await cropOn.getAttribute("aria-pressed")) !== "true") throw new Error("Crop ON missing aria-pressed=true");
   await cropOn.click();
   const cropOff = page.getByRole("button", { name: "Crop OFF" });
+  const inactivePreset = page.getByRole("button", { name: "1:1", exact: true });
+  if (await inactivePreset.isEnabled()) throw new Error("Crop OFF left preset enabled");
+  await cropOff.press("Enter");
+  if (!(await page.getByRole("button", { name: "Crop ON" }).count())) {
+    throw new Error("Enter on Crop OFF did not re-enable crop");
+  }
+  if (await page.getByRole("button", { name: "Stop", exact: true }).count()) {
+    throw new Error("Enter on Crop OFF incorrectly started a video encode");
+  }
+  qaChecks.push("disabled-crop-and-enter-button-isolation");
   if ((await cropOff.getAttribute("aria-pressed")) !== "false") throw new Error("Crop OFF missing aria-pressed=false");
-  await cropOff.click();
+  // Crop is already enabled through the keyboard action.
   qaChecks.push("toggle-semantics");
 
   await page.getByText("Processing log", { exact: true }).click();
@@ -201,6 +254,8 @@ try {
   }
   qaChecks.push("completion-status");
   const mp4Download = await verifyDownload("mp4");
+  await checkToolbar("output");
+  qaChecks.push("output-preview-mobile-controls");
 
   // Exercise the second supported output container in real Chrome.
   await page.getByRole("button", { name: "WEBM", exact: true }).click();
@@ -242,6 +297,10 @@ try {
   // Verify optional stages are really omitted in the FFmpeg command, not just visually toggled.
   await page.getByRole("button", { name: "Crop ON" }).click();
   await page.getByRole("button", { name: "Limit ON" }).click();
+  if (!(await page.getByRole("spinbutton", { name: "Maximum output file size in megabytes" }).isDisabled())) {
+    throw new Error("Limit OFF left size input enabled");
+  }
+  qaChecks.push("disabled-size-control");
   await page.getByRole("button", { name: "MP4", exact: true }).click();
   await processButton.click();
   await page.waitForFunction(

@@ -247,7 +247,7 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                       </Button>
                     </Tooltip>
                   </div>
-                  <div className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-green-700/85 text-xs font-semibold text-white">
+                  <div className="absolute top-20 right-3 sm:top-3 px-2 py-1 rounded-lg bg-green-700/85 text-xs font-semibold text-white">
                     Output · {c.resultBlob ? prettyBytes(c.resultBlob.size) : ""}
                   </div>
                 </motion.div>
@@ -340,7 +340,7 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                   <button
                     type="button"
                     onClick={() => c.setShowCirclePreview((v) => !v)}
-                    className={`absolute top-3 right-3 z-20 inline-flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/60 ${
+                    className={`absolute top-20 right-3 sm:top-3 z-20 inline-flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/60 ${
                       c.showCirclePreview
                         ? "bg-pink-500/15 text-pink-300 border border-pink-500/40"
                         : "bg-zinc-800/80 text-zinc-400 border border-zinc-700 hover:text-zinc-100"
