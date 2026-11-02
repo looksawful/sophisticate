@@ -428,6 +428,8 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                         trimEnd={c.trimEnd}
                         onStartPointerDown={handleStartHandleDown}
                         onEndPointerDown={handleEndHandleDown}
+                        onTrimChange={c.setTrimRange}
+                        processing={c.processing}
                       />
                     </div>
 
