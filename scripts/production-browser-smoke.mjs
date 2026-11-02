@@ -329,7 +329,6 @@ try {
   // 1:1 preset must produce square encoded dimensions, unlike the disabled crop stage.
   await page.getByRole("button", { name: "Crop OFF" }).click();
   await page.getByRole("button", { name: "1:1", exact: true }).click();
-  await page.getByRole("button", { name: "Loop ON", exact: false }).click();
   await page.getByRole("button", { name: "MP4", exact: true }).click();
   await processButton.click();
   await page.waitForFunction(
