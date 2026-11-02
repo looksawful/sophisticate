@@ -13,12 +13,17 @@ describe("TimelineTrimHandles", () => {
         trimEnd: 10,
         onStartPointerDown: () => {},
         onEndPointerDown: () => {},
+        onStartChange: () => {},
+        onEndChange: () => {},
       }),
     );
 
     expect(html).toContain('data-trim-handle="start"');
     expect(html).toContain('data-trim-handle="end"');
     expect(html).toContain('data-trim-handle="start" style="left:0%"');
+    expect(html).toContain('aria-label="Trim start"');
+    expect(html).toContain('aria-label="Trim end"');
+    expect((html.match(/role="slider"/g) ?? []).length).toBe(2);
     expect(html).toContain('data-trim-handle="end" style="left:100%"');
   });
 
@@ -30,6 +35,8 @@ describe("TimelineTrimHandles", () => {
         trimEnd: Number.POSITIVE_INFINITY,
         onStartPointerDown: () => {},
         onEndPointerDown: () => {},
+        onStartChange: () => {},
+        onEndChange: () => {},
       }),
     );
 
