@@ -183,6 +183,11 @@ try {
   await page.getByRole("button", { name: "WEBM", exact: true }).click();
   await processButton.click();
   await page.waitForFunction(
+    () => document.querySelector('[role="status"]')?.textContent === "Processing video",
+    undefined,
+    { timeout: 20_000 },
+  );
+  await page.waitForFunction(
     () => document.querySelector('[role="status"]')?.textContent === "Video ready to download",
     undefined,
     { timeout: 120_000 },
