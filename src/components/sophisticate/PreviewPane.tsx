@@ -206,7 +206,7 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                 : "border-zinc-800"
             }`}
           >
-            <input {...getInputProps()} />
+            <input {...getInputProps({ "aria-label": "Choose a video file" })} />
             <AnimatePresence mode="wait">
               {c.showResult && c.resultUrl ? (
                 <motion.div
@@ -428,6 +428,9 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                         trimEnd={c.trimEnd}
                         onStartPointerDown={handleStartHandleDown}
                         onEndPointerDown={handleEndHandleDown}
+                        onStartChange={(next) => c.setTrimRange(next, c.trimEnd)}
+                        onEndChange={(next) => c.setTrimRange(c.trimStart, next)}
+                        disabled={c.processing}
                       />
                     </div>
 
