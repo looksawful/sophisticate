@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { auroraSignal } from "../auroraSignal";
 import { ASPECT_PRESETS } from "./config";
+import { getAppShortcut } from "./keyboardShortcuts";
 import { useCropState } from "./hooks/useCropState";
 import { useLogState } from "./hooks/useLogState";
 import { normalizeTrimRange } from "./hooks/trimRange";
@@ -344,20 +345,12 @@ export function useSophisticateController() {
   // --- Keyboard shortcuts ---
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const isEditableTarget =
-        e.target instanceof HTMLElement &&
-        (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable);
-
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") {
-        e.preventDefault();
-        inputRef.current?.click();
-      }
-      if (e.key === "Enter" && canConvert && !isEditableTarget) {
-        realProcess();
-      }
-      if (e.key === "Escape" && !isEditableTarget) {
-        clearAll();
-      }
+      const shortcut = getAppShortcut(e, canConvert);
+      if (!shortcut) return;
+      e.preventDefault();
+      if (shortcut === "open") inputRef.current?.click();
+      if (shortcut === "process") void realProcess();
+      if (shortcut === "clear") clearAll();
     };
 
     window.addEventListener("keydown", onKey);
