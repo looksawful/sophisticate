@@ -206,7 +206,7 @@ export const PreviewPane = memo(function PreviewPane({ c }: { c: SophisticateCon
                 : "border-zinc-800"
             }`}
           >
-            <input {...getInputProps()} />
+            <input {...getInputProps({ "aria-label": "Choose a video file" })} />
             <AnimatePresence mode="wait">
               {c.showResult && c.resultUrl ? (
                 <motion.div
