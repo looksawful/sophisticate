@@ -182,8 +182,6 @@ try {
     throw new Error("Both file inputs must have accessible names");
   }
   qaChecks.push("semantic-main-and-upload-names");
-  await checkToolbar("source");
-  qaChecks.push("source-preview-mobile-controls");
 
   const trimStart = page.getByRole("slider", { name: "Trim start" });
   const trimEnd = page.getByRole("slider", { name: "Trim end" });
@@ -202,6 +200,8 @@ try {
     })), null, 2));
     throw error;
   }
+  await checkToolbar("source");
+  qaChecks.push("source-preview-mobile-controls");
   const beforeTrim = Number(await trimStart.getAttribute("aria-valuenow"));
   await trimStart.focus();
   await trimStart.press("ArrowRight");
@@ -267,6 +267,7 @@ try {
   }
   qaChecks.push("completion-status");
   const mp4Download = await verifyDownload("mp4");
+  await page.locator(".result-player-shell video").waitFor({ state: "visible", timeout: 15_000 });
   await checkToolbar("output");
   qaChecks.push("output-preview-mobile-controls");
 
