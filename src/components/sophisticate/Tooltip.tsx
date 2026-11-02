@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { cloneElement, Fragment, isValidElement, memo, useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 export const Tooltip = memo(function Tooltip({
@@ -16,6 +16,7 @@ export const Tooltip = memo(function Tooltip({
   const anchorRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
+  const descriptionId = useId();
   const [coords, setCoords] = useState({ left: 0, top: 0 });
 
   const updatePosition = useCallback(() => {
@@ -56,6 +57,13 @@ export const Tooltip = memo(function Tooltip({
     };
   }, [open, updatePosition]);
 
+  const describedChild =
+    isValidElement<{ "aria-describedby"?: string }>(children) && children.type !== Fragment
+      ? cloneElement(children, {
+          "aria-describedby": [children.props["aria-describedby"], descriptionId].filter(Boolean).join(" "),
+        })
+      : children;
+
   return (
     <div
       ref={anchorRef}
@@ -64,11 +72,19 @@ export const Tooltip = memo(function Tooltip({
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
       onBlur={() => setOpen(false)}
+      onKeyDown={(event) => {
+        if (open && event.key === "Escape") {
+          event.stopPropagation();
+          setOpen(false);
+        }
+      }}
     >
-      {children}
+      {describedChild}
+      <span id={descriptionId} role="tooltip" className="sr-only">{text}</span>
       {open &&
         createPortal(
           <div
+            aria-hidden="true"
             ref={tooltipRef}
             style={{ left: coords.left, top: coords.top }}
             className="pointer-events-none fixed px-2.5 py-1.5 rounded-lg border border-zinc-700/90 bg-zinc-900/95 backdrop-blur-md text-xs text-zinc-100 shadow-lg shadow-black/45 z-[9999] max-w-[min(320px,calc(100vw-16px))] animate-[fadeIn_150ms_ease-out]"
