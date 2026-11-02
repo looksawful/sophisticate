@@ -104,7 +104,8 @@ const verifyDownload = async (ext) => {
   if (!(ext === "mp4" ? container.includes("mp4") : container.includes("webm"))) {
     throw new Error(`Unexpected downloaded ${ext} container: ${container}`);
   }
-  return { name, bytes: statSync(path).size, container };
+  const video = probe.streams.find((stream) => stream.codec_type === "video");
+  return { name, bytes: statSync(path).size, container, width: video.width, height: video.height };
 };
 
 try {
@@ -281,6 +282,72 @@ try {
   }
   qaChecks.push("dragdrop-replacement-clears-output");
 
+  // Stop a genuine in-flight WEBM FFmpeg encode after its command is issued, then retry immediately.
+  await page.getByRole("button", { name: "WEBM", exact: true }).click();
+  await processButton.click();
+  await page.waitForFunction(
+    () => document.querySelector('[role="status"]')?.textContent === "Processing video",
+    undefined,
+    { timeout: 20_000 },
+  );
+  await page.waitForFunction(
+    () => document.body.textContent?.includes("[run] ffmpeg ") &&
+          document.body.textContent?.includes("output.webm"),
+    undefined,
+    { timeout: 60_000 },
+  );
+  await page.getByRole("button", { name: "Stop", exact: true }).click();
+  await page.waitForFunction(
+    () => document.querySelector('[role="status"]')?.textContent === "Processing cancelled",
+    undefined,
+    { timeout: 30_000 },
+  );
+  if (!(await processButton.isEnabled())) throw new Error("Cannot restart after cancellation");
+  await processButton.click();
+  await page.waitForFunction(
+    () => document.querySelector('[role="status"]')?.textContent === "Processing video",
+    undefined,
+    { timeout: 20_000 },
+  );
+  await page.waitForFunction(
+    () => document.querySelector('[role="status"]')?.textContent === "Video ready to download",
+    undefined,
+    { timeout: 120_000 },
+  );
+  await page.locator(".result-player-shell video").waitFor({ state: "attached", timeout: 15_000 });
+  const afterRetry = await page.evaluate(async () => {
+    const src = document.querySelector(".result-player-shell video")?.src;
+    if (!src) return null;
+    const res = await fetch(src);
+    return { type: (await res.blob()).type, size: Number(res.headers.get("content-length")) || 0 };
+  });
+  if (afterRetry?.type !== "video/webm") {
+    throw new Error("Cancel/retry did not produce a WEBM result: " + JSON.stringify(afterRetry));
+  }
+  qaChecks.push("cancel-inflight-webm-and-immediate-retry");
+
+  // 1:1 preset must produce square encoded dimensions, unlike the disabled crop stage.
+  await page.getByRole("button", { name: "Crop OFF" }).click();
+  await page.getByRole("button", { name: "1:1", exact: true }).click();
+  await page.getByRole("button", { name: "Loop ON", exact: false }).click();
+  await page.getByRole("button", { name: "MP4", exact: true }).click();
+  await processButton.click();
+  await page.waitForFunction(
+    () => document.querySelector('[role="status"]')?.textContent === "Processing video",
+    undefined,
+    { timeout: 20_000 },
+  );
+  await page.waitForFunction(
+    () => document.querySelector('[role="status"]')?.textContent === "Video ready to download",
+    undefined,
+    { timeout: 120_000 },
+  );
+  const square = await verifyDownload("mp4");
+  if (square.width !== 240 || square.height !== 240) {
+    throw new Error("1:1 crop did not produce 240x240 encoded video: " + JSON.stringify(square));
+  }
+  qaChecks.push("square-preset-encoded-dimensions");
+
   const required = ["ffmpeg-core/ffmpeg-core.js", "ffmpeg-core/ffmpeg-core.wasm"];
   for (const needle of required) {
     const hit = runtimeRequests.find((r) => r.url.includes(needle) && r.status >= 200 && r.status < 400);
@@ -303,6 +370,7 @@ try {
     webmArtifact,
     mp4Download,
     webmDownload,
+    square,
   }, null, 2));
 } catch (error) {
   console.error("SMOKE_DIAGNOSTICS", JSON.stringify({
