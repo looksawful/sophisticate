@@ -5,6 +5,12 @@ export type TrimRange = {
 
 const NOMINAL_MIN_GAP_SECONDS = 0.1;
 
+export function minimumTrimGap(duration: number): number {
+  return Number.isFinite(duration) && duration > 0
+    ? Math.min(NOMINAL_MIN_GAP_SECONDS, duration)
+    : 0;
+}
+
 const finiteOr = (value: number, fallback: number) => (Number.isFinite(value) ? value : fallback);
 
 export function normalizeTrimRange(start: number, end: number, duration: number): TrimRange {
@@ -13,7 +19,7 @@ export function normalizeTrimRange(start: number, end: number, duration: number)
   }
 
   const max = duration;
-  const minGap = Math.min(NOMINAL_MIN_GAP_SECONDS, max);
+  const minGap = minimumTrimGap(max);
   const requestedStart = finiteOr(start, 0);
   const requestedEnd = finiteOr(end, max);
   const clampedStart = Math.max(0, Math.min(requestedStart, max));
