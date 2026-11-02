@@ -7,8 +7,10 @@ import { Tooltip } from "./Tooltip";
 describe("Tooltip accessible description", () => {
   it("links the rendered trigger to its tooltip description", () => {
     const html = renderToStaticMarkup(
-      createElement(Tooltip, { text: "Sets maximum output file size" },
-        createElement("button", { type: "button" }, "Size limit")),
+      createElement(Tooltip, {
+        text: "Sets maximum output file size",
+        children: createElement("button", { type: "button" }, "Size limit"),
+      }),
     );
     const id = html.match(/aria-describedby="([^"]+)"/)?.[1];
     expect(id).toBeTruthy();
