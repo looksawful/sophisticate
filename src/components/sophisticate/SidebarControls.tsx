@@ -12,7 +12,7 @@ import type { SophisticateController } from "./useSophisticateController";
 
 export const SidebarControls = memo(function SidebarControls({ c }: { c: SophisticateController }) {
   return (
-    <motion.aside variants={riseVariants} className={`lg:col-span-4 ${ui.panelStrong} bg-zinc-950/95 shadow-xl`}>
+    <motion.aside aria-label="Video settings" variants={riseVariants} className={`lg:col-span-4 ${ui.panelStrong} bg-zinc-950/95 shadow-xl`}>
       <div className="h-full p-4 sm:p-5 grid gap-4 overflow-y-auto max-h-[calc(100dvh-100px)]">
         <section className="rounded-xl border border-zinc-800/90 p-3.5 grid gap-3">
           <div className="flex items-center justify-between">

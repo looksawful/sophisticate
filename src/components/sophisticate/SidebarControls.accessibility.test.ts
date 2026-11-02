@@ -29,6 +29,7 @@ describe("disabled settings keyboard semantics", () => {
     const sizeInput = html.match(/<input[^>]*aria-label="Maximum output file size in megabytes"[^>]*>/)?.[0];
     expect(ratioButton).toMatch(/ disabled=""/);
     expect(sizeInput).toMatch(/ disabled=""/);
+    expect(html).toContain('aria-label="Video settings"');
     const customWidth = html.match(/<input[^>]*aria-label="Custom aspect ratio width"[^>]*>/)?.[0];
     expect(customWidth).toMatch(/ disabled=""/);
   });

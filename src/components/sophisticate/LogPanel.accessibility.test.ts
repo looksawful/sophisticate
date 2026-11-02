@@ -20,5 +20,8 @@ describe("processing log accessible names", () => {
     const html = renderToStaticMarkup(createElement(LogPanel, { c }));
     expect(html).toContain('aria-label="Filter processing logs"');
     expect(html).toContain('aria-label="Search processing logs"');
+    expect(html).toContain('for="processing-log-search"');
+    expect(html).toContain('id="processing-log-search"');
+    expect(html).toContain(">Search logs</label>");
   });
 });

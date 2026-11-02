@@ -56,7 +56,9 @@ export const LogPanel = memo(function LogPanel({ c }: { c: SophisticateControlle
             <option value="errors">Errors</option>
             <option value="ffmpeg">FFmpeg</option>
           </Select>
+          <label htmlFor="processing-log-search" className="text-xs text-zinc-300">Search logs</label>
           <Input
+            id="processing-log-search"
             aria-label="Search processing logs"
             value={c.logQuery}
             onChange={(e) => c.setLogQuery(e.target.value)}
