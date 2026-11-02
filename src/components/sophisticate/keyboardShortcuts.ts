@@ -14,8 +14,8 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
 }
 
 /** Resolve window shortcuts without hijacking native keyboard interaction. */
-export function getAppShortcut(event: ShortcutEvent, canConvert: boolean): AppShortcut {
-  if (event.defaultPrevented || event.repeat || event.altKey) return null;
+export function getAppShortcut(event: ShortcutEvent, canConvert: boolean, processing = false): AppShortcut {
+  if (processing || event.defaultPrevented || event.repeat || event.altKey) return null;
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "o") return "open";
   if (event.ctrlKey || event.metaKey || isInteractiveTarget(event.target)) return null;
   if (event.key === "Enter" && canConvert) return "process";

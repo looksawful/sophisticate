@@ -345,7 +345,7 @@ export function useSophisticateController() {
   // --- Keyboard shortcuts ---
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const shortcut = getAppShortcut(e, canConvert);
+      const shortcut = getAppShortcut(e, canConvert, processing);
       if (!shortcut) return;
       e.preventDefault();
       if (shortcut === "open") inputRef.current?.click();
@@ -355,7 +355,7 @@ export function useSophisticateController() {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [canConvert, clearAll, realProcess]);
+  }, [canConvert, clearAll, processing, realProcess]);
 
   // --- Cleanup ---
   useEffect(() => {
