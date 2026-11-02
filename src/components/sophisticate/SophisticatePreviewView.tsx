@@ -22,9 +22,10 @@ export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
       animate="animate"
     >
       <div className="mx-auto max-w-[1500px] px-5 sm:px-7 py-5 sm:py-6 min-h-screen flex flex-col">
-        <input ref={c.inputRef} type="file" accept="video/*" onChange={c.handlePick} className="hidden" />
+        <input aria-label="Choose video file" ref={c.inputRef} type="file" accept="video/*" onChange={c.handlePick} className="hidden" />
 
-        <div className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col">
+          <h1 className="sr-only">Sophisticate video editor</h1>
           <motion.div variants={fadeVariants} className="flex items-center justify-end gap-4 mb-4">
             <div className="text-base text-zinc-300">
               {c.fileBadge}
@@ -41,7 +42,7 @@ export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
           </div>
 
           <LogPanel c={c} />
-        </div>
+        </main>
         <AppFooter />
       </div>
     </motion.div>
