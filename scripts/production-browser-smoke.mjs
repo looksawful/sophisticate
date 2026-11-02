@@ -98,6 +98,52 @@ try {
     { timeout: 30_000 },
   );
 
+  // QA-only integration assertions for accessibility PRs 36–38.
+  const qaChecks = [];
+  if ((await page.getByRole("main").count()) !== 1) throw new Error("Missing main landmark");
+  if ((await page.getByRole("heading", { name: "Sophisticate video editor", level: 1 }).count()) !== 1) {
+    throw new Error("Missing screen-reader page heading");
+  }
+  if ((await page.locator('input[type="file"][aria-label]').count()) !== 2) {
+    throw new Error("Both file inputs must have accessible names");
+  }
+  qaChecks.push("semantic-main-and-upload-names");
+
+  const trimStart = page.getByRole("slider", { name: "Trim start" });
+  const trimEnd = page.getByRole("slider", { name: "Trim end" });
+  if ((await trimStart.count()) !== 1 || (await trimEnd.count()) !== 1) {
+    throw new Error("Missing keyboard-accessible trim handles");
+  }
+  const beforeTrim = Number(await trimStart.getAttribute("aria-valuenow"));
+  await trimStart.focus();
+  await trimStart.press("ArrowRight");
+  const afterTrim = Number(await trimStart.getAttribute("aria-valuenow"));
+  if (!(afterTrim > beforeTrim)) throw new Error("ArrowRight did not move Trim start");
+  await trimStart.press("ArrowLeft");
+  await trimStart.press("Escape");
+  if (!(await page.getByRole("button", { name: /^Process$/ }).isEnabled())) {
+    throw new Error("Escape from trim slider cleared or disabled the video");
+  }
+  qaChecks.push("keyboard-trim-and-shortcut-isolation");
+
+  const cropOn = page.getByRole("button", { name: "Crop ON" });
+  if ((await cropOn.getAttribute("aria-pressed")) !== "true") throw new Error("Crop ON missing aria-pressed=true");
+  await cropOn.click();
+  const cropOff = page.getByRole("button", { name: "Crop OFF" });
+  if ((await cropOff.getAttribute("aria-pressed")) !== "false") throw new Error("Crop OFF missing aria-pressed=false");
+  await cropOff.click();
+  qaChecks.push("toggle-semantics");
+
+  await page.getByText("Processing log", { exact: true }).click();
+  await page.getByRole("combobox", { name: "Filter processing logs" }).selectOption("errors");
+  const searchLog = page.getByRole("textbox", { name: "Search processing logs" });
+  await searchLog.fill("test search");
+  await searchLog.press("Escape");
+  if ((await searchLog.inputValue()) !== "test search") throw new Error("Escape destroyed log editor content");
+  await searchLog.fill("");
+  await page.getByRole("combobox", { name: "Filter processing logs" }).selectOption("all");
+  qaChecks.push("log-control-names-and-shortcut-isolation");
+
   const processButton = page.getByRole("button", { name: /^Process$/ });
   await processButton.click();
 
@@ -115,6 +161,40 @@ try {
 
   const download = page.getByRole("button", { name: /Download/i });
   if (!(await download.isEnabled())) throw new Error("Download button is not enabled after encode");
+
+  if ((await page.getByRole("status").textContent()) !== "Video ready to download") {
+    throw new Error("Completed encode was not announced by live region");
+  }
+  qaChecks.push("completion-status");
+
+  // Exercise the second supported output container in real Chrome.
+  await page.getByRole("button", { name: "WEBM", exact: true }).click();
+  await processButton.click();
+  await page.waitForFunction(
+    () => document.querySelector('[role="status"]')?.textContent === "Video ready to download",
+    undefined,
+    { timeout: 120_000 },
+  );
+  const webmArtifact = await page.evaluate(async () => {
+    const player = document.querySelector(".result-player-shell video");
+    if (!(player instanceof HTMLVideoElement)) throw new Error("WEBM result player missing");
+    const res = await fetch(player.src);
+    if (!res.ok) throw new Error("WEBM Blob URL not readable");
+    const blob = await res.blob();
+    const magic = [...new Uint8Array(await blob.slice(0, 4).arrayBuffer())];
+    return { type: blob.type, size: blob.size, magic };
+  });
+  if (webmArtifact.type !== "video/webm" ||
+      webmArtifact.magic.join(",") !== "26,69,223,163") {
+    throw new Error("WEBM output MIME/container mismatch: " + JSON.stringify(webmArtifact));
+  }
+  if (!(webmArtifact.size > 0 && webmArtifact.size <= 0.49 * 1024 * 1024)) {
+    throw new Error("WEBM output violates enabled 0.49 MB limit: " + JSON.stringify(webmArtifact));
+  }
+  if (!(await page.getByRole("button", { name: /Download/i }).isEnabled())) {
+    throw new Error("WEBM result is not downloadable");
+  }
+  qaChecks.push("real-webm-container-and-output-size-limit");
 
   const required = ["ffmpeg-core/ffmpeg-core.js", "ffmpeg-core/ffmpeg-core.wasm"];
   for (const needle of required) {
@@ -134,6 +214,8 @@ try {
     fixture: { name: "test-320x240-3s.mp4", size: statSync(fixture).size },
     runtimeRequests,
     workerUrls,
+    qaChecks,
+    webmArtifact,
   }, null, 2));
 } catch (error) {
   console.error("SMOKE_DIAGNOSTICS", JSON.stringify({
