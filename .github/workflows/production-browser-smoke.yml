@@ -54,7 +54,7 @@ jobs:
         run: npm run build
 
       - name: Install pinned smoke driver
-        run: npm install --no-save --package-lock=false playwright-core@1.55.0
+        run: npm install --prefix ./scripts --no-save --package-lock=false --ignore-scripts playwright-core@1.55.0
 
       - name: Run real Chrome production smoke
         run: node scripts/production-browser-smoke.mjs
