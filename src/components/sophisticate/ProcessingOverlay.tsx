@@ -52,7 +52,14 @@ export const ProcessingOverlay = memo(function ProcessingOverlay({
           </div>
         </div>
 
-        <div className="relative h-3 rounded-full bg-zinc-800/80 overflow-hidden">
+        <div
+          className="relative h-3 rounded-full bg-zinc-800/80 overflow-hidden"
+          role="progressbar"
+          aria-label="Video processing progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={pct}
+        >
           <motion.div
             className="absolute inset-y-0 left-0 rounded-full bg-pink-500/20 blur-md"
             animate={{ width: `${pct}%` }}
