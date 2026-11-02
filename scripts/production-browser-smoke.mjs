@@ -192,6 +192,7 @@ try {
     undefined,
     { timeout: 120_000 },
   );
+  await page.locator(".result-player-shell video").waitFor({ state: "attached", timeout: 15_000 });
   const webmArtifact = await page.evaluate(async () => {
     const player = document.querySelector(".result-player-shell video");
     if (!(player instanceof HTMLVideoElement)) throw new Error("WEBM result player missing");
