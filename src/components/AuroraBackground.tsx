@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { auroraSignal } from "./auroraSignal";
+import { shouldAnimateAurora } from "./auroraMotion";
 
 const vertexSource = `
 attribute vec2 aPosition;
@@ -144,27 +145,63 @@ export default function AuroraBackground() {
     if (color1Location) gl.uniform3f(color1Location, 1.0, 0.35, 0.72);
     if (color2Location) gl.uniform3f(color2Location, 0.03, 0.01, 0.03);
 
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
     let rafId = 0;
     let lastFrame = performance.now();
     let time = 0;
 
-    const render = (now: number) => {
-      rafId = window.requestAnimationFrame(render);
-      if (auroraSignal.paused) return;
-      if (now - lastFrame < frameInterval) return;
-      const delta = now - lastFrame;
-      lastFrame = now;
-      time += delta / 1000;
+    const paint = () => {
       if (timeLocation) gl.uniform1f(timeLocation, time);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
 
-    rafId = window.requestAnimationFrame(render);
+    const canAnimate = () =>
+      shouldAnimateAurora({ reducedMotion: motionPreference.matches, documentHidden: document.hidden });
+
+    const render = (now: number) => {
+      rafId = 0;
+      if (!canAnimate()) return;
+
+      if (now - lastFrame >= frameInterval) {
+        const delta = now - lastFrame;
+        lastFrame = now;
+        if (!auroraSignal.paused) {
+          time += delta / 1000;
+          paint();
+        }
+      }
+      rafId = window.requestAnimationFrame(render);
+    };
+
+    const refreshMotion = () => {
+      if (!canAnimate()) {
+        if (rafId) window.cancelAnimationFrame(rafId);
+        rafId = 0;
+        // Reduced motion renders one still frame, not a blank background.
+        if (!document.hidden) paint();
+        return;
+      }
+      if (!rafId) {
+        lastFrame = performance.now();
+        rafId = window.requestAnimationFrame(render);
+      }
+    };
+
+    const onResizePaint = () => {
+      if (motionPreference.matches && !document.hidden) paint();
+    };
+    window.addEventListener("resize", onResizePaint);
+    motionPreference.addEventListener("change", refreshMotion);
+    document.addEventListener("visibilitychange", refreshMotion);
+    refreshMotion();
 
     return () => {
-      window.cancelAnimationFrame(rafId);
+      if (rafId) window.cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", onResizePaint);
+      motionPreference.removeEventListener("change", refreshMotion);
+      document.removeEventListener("visibilitychange", refreshMotion);
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
       gl.deleteShader(vertexShader);
