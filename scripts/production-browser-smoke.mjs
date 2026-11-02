@@ -114,6 +114,21 @@ try {
   if ((await trimStart.count()) !== 1 || (await trimEnd.count()) !== 1) {
     throw new Error("Missing keyboard-accessible trim handles");
   }
+  // Media dimensions may arrive before duration; require an actually interactive timeline.
+  try {
+    await trimStart.waitFor({ state: "visible", timeout: 30_000 });
+    await trimEnd.waitFor({ state: "visible", timeout: 30_000 });
+  } catch (error) {
+    console.error("QA_VIDEO_METADATA", JSON.stringify(await page.evaluate(() => ({
+      videos: [...document.querySelectorAll("video")].map((v) => ({
+        currentSrc: v.currentSrc, readyState: v.readyState, networkState: v.networkState,
+        duration: v.duration, videoWidth: v.videoWidth, videoHeight: v.videoHeight,
+      })),
+      sliderCount: document.querySelectorAll('[role="slider"]').length,
+      logText: document.querySelector("details")?.textContent?.slice(-1200) ?? "",
+    })), null, 2));
+    throw error;
+  }
   const beforeTrim = Number(await trimStart.getAttribute("aria-valuenow"));
   await trimStart.focus();
   await trimStart.press("ArrowRight");
