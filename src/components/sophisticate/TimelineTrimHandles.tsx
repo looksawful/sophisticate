@@ -48,7 +48,7 @@ export function TimelineTrimHandles({
   };
 
   const handleClass =
-    "absolute top-1/2 z-30 h-11 w-6 -translate-x-1/2 -translate-y-1/2 rounded-sm cursor-ew-resize pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 hover:[&>span]:bg-pink-400";
+    "absolute top-1/2 z-30 h-11 w-6 -translate-x-1/2 -translate-y-1/2 rounded-sm cursor-ew-resize pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 hover:bg-pink-500/10 hover:[&>span]:bg-pink-400";
   const handleMark =
     "pointer-events-none absolute left-1/2 top-1/2 h-9 w-2 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-zinc-400/90";
 
