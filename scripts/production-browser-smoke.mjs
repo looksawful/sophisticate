@@ -207,6 +207,9 @@ try {
   if ((await cropOn.getAttribute("aria-pressed")) !== "true") throw new Error("Crop ON missing aria-pressed=true");
   await cropOn.click();
   const cropOff = page.getByRole("button", { name: "Crop OFF" });
+  if ((await cropOff.getAttribute("aria-pressed")) !== "false") {
+    throw new Error("Crop OFF missing aria-pressed=false");
+  }
   const inactivePreset = page.getByRole("button", { name: "1:1", exact: true });
   if (await inactivePreset.isEnabled()) throw new Error("Crop OFF left preset enabled");
   await cropOff.press("Enter");
@@ -217,7 +220,6 @@ try {
     throw new Error("Enter on Crop OFF incorrectly started a video encode");
   }
   qaChecks.push("disabled-crop-and-enter-button-isolation");
-  if ((await cropOff.getAttribute("aria-pressed")) !== "false") throw new Error("Crop OFF missing aria-pressed=false");
   // Crop is already enabled through the keyboard action.
   qaChecks.push("toggle-semantics");
 
