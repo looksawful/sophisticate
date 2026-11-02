@@ -46,6 +46,7 @@ export const LogPanel = memo(function LogPanel({ c }: { c: SophisticateControlle
       <div className="p-3 border-t border-zinc-800 space-y-3">
         <div className="flex flex-wrap gap-2 items-center">
           <Select
+            aria-label="Filter processing logs"
             value={c.logFilter}
             onChange={(e) => c.setLogFilter(e.target.value as typeof c.logFilter)}
             className="px-2 py-1 text-xs"
@@ -56,6 +57,7 @@ export const LogPanel = memo(function LogPanel({ c }: { c: SophisticateControlle
             <option value="ffmpeg">FFmpeg</option>
           </Select>
           <Input
+            aria-label="Search processing logs"
             value={c.logQuery}
             onChange={(e) => c.setLogQuery(e.target.value)}
             placeholder="Search log entries"

@@ -24,9 +24,10 @@ export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
       animate="animate"
     >
       <div className="mx-auto max-w-[1500px] px-5 sm:px-7 py-5 sm:py-6 min-h-screen flex flex-col">
-        <input ref={c.inputRef} type="file" accept="video/*" onChange={c.handlePick} className="hidden" />
+        <input aria-label="Choose video file" ref={c.inputRef} type="file" accept="video/*" onChange={c.handlePick} className="hidden" />
 
-        <div className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col">
+          <h1 className="sr-only">Sophisticate video editor</h1>
           <div role="status" aria-live="polite" className="sr-only">{status}</div>
           {error && (
             <div role="alert" className="mb-4 rounded-xl border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-100">
@@ -49,7 +50,7 @@ export function SophisticatePreviewView({ c }: { c: SophisticateController }) {
           </div>
 
           <LogPanel c={c} />
-        </div>
+        </main>
         <AppFooter />
       </div>
     </motion.div>

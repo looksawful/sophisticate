@@ -36,7 +36,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                 <Tooltip key={preset.label} text={preset.desc} position="bottom">
                   <Button
                     onClick={() => c.applyPreset(preset)}
-                    disabled={!c.fileUrl || c.processing}
+                    disabled={!c.fileUrl || c.processing || !c.cropEnabled}
                     aria-pressed={c.activePreset === preset.label}
                     variant={c.activePreset === preset.label ? "chipActive" : "chip"}
                     size="sm"
@@ -55,7 +55,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                   max="100"
                   value={c.customW}
                   onChange={(e) => c.applyCustomRatio(e.target.value, c.customH)}
-                  disabled={!c.fileUrl || c.processing}
+                  disabled={!c.fileUrl || c.processing || !c.cropEnabled}
                   aria-label="Custom aspect ratio width"
                   className="w-16 px-2 py-1.5 text-sm tabular-nums text-center"
                   placeholder="W"
@@ -67,7 +67,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                   max="100"
                   value={c.customH}
                   onChange={(e) => c.applyCustomRatio(c.customW, e.target.value)}
-                  disabled={!c.fileUrl || c.processing}
+                  disabled={!c.fileUrl || c.processing || !c.cropEnabled}
                   aria-label="Custom aspect ratio height"
                   className="w-16 px-2 py-1.5 text-sm tabular-nums text-center"
                   placeholder="H"
@@ -80,7 +80,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                 <Tooltip key={preset.label} text={preset.desc} position="bottom">
                   <Button
                     onClick={() => c.applyPreset(preset)}
-                    disabled={!c.fileUrl || c.processing}
+                    disabled={!c.fileUrl || c.processing || !c.cropEnabled}
                     aria-pressed={c.activePreset === preset.label}
                     variant={c.activePreset === preset.label ? "chipActive" : "chip"}
                     size="sm"
@@ -152,7 +152,7 @@ export const SidebarControls = memo(function SidebarControls({ c }: { c: Sophist
                   min="0.01"
                   value={c.maxSize}
                   onChange={(e) => c.setMaxSize(e.target.value)}
-                  disabled={c.processing}
+                  disabled={c.processing || !c.sizeLimitEnabled}
                   aria-label="Maximum output file size in megabytes"
                   className="w-full px-3.5 py-3 text-xl font-semibold tabular-nums"
                 />
