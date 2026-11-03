@@ -5,8 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "dev:turbo": "next dev --turbo",
-    "dev:auto": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
