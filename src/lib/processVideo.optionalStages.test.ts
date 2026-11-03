@@ -82,3 +82,59 @@ describe("processVideo optional pipeline stages", () => {
     expect(args.some((arg) => arg.includes("NaN"))).toBe(false);
   });
 });
+
+describe("processVideo actual FFmpeg command arguments", () => {
+  beforeEach(() => {
+    mockState.execCalls.length = 0;
+  });
+
+  it("applies trim, speed, FPS and muted MP4 options through the real pipeline", async () => {
+    await processVideo(file, {
+      ...baseOptions,
+      duration: 3,
+      trimStart: 1,
+      trimEnd: 2.5,
+      speed: 2,
+      fps: 15,
+      maxSizeMB: undefined,
+    });
+
+    expect(mockState.execCalls).toHaveLength(1);
+    expect(mockState.execCalls[0]).toEqual([
+      "-ss", "1.000", "-i", "input.mp4", "-t", "1.500",
+      "-vf", "setpts=0.5000*PTS,fps=15",
+      "-c:v", "libx264", "-preset", "ultrafast",
+      "-crf", "26", "-an", "-movflags", "+faststart", "-y", "output.mp4",
+    ]);
+  });
+
+  it("applies loop, audio speed and WEBM codec options through the real pipeline", async () => {
+    await processVideo(file, {
+      ...baseOptions,
+      format: "WEBM",
+      includeAudio: true,
+      loop: 2,
+      speed: 1.5,
+      quality: "high",
+      maxSizeMB: undefined,
+    });
+
+    expect(mockState.execCalls).toHaveLength(1);
+    expect(mockState.execCalls[0]).toEqual([
+      "-stream_loop", "1", "-i", "input.mp4",
+      "-vf", "setpts=0.6667*PTS", "-af", "atempo=1.5000",
+      "-c:v", "libvpx", "-crf", "14", "-b:v", "0",
+      "-c:a", "libvorbis", "-b:a", "128k", "-y", "output.webm",
+    ]);
+  });
+
+  it.each([
+    ["low", "32"],
+    ["medium", "26"],
+    ["high", "20"],
+  ] as const)("uses actual MP4 %s quality CRF %s", async (quality, crf) => {
+    await processVideo(file, { ...baseOptions, quality, maxSizeMB: undefined });
+    const args = mockState.execCalls[0];
+    expect(args[args.indexOf("-crf") + 1]).toBe(crf);
+  });
+});

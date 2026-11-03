@@ -5,7 +5,7 @@
       "name": "Sophisticate: Dev + Auto Browser",
       "type": "node-terminal",
       "request": "launch",
-      "command": "npm run dev:auto",
+      "command": "npm run dev",
       "cwd": "${workspaceFolder}"
     },
     {
