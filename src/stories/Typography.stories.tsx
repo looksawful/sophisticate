@@ -1,0 +1,3 @@
+const styles=[["Title","text-3xl font-bold","Заголовок приложения"],["Section","text-xl font-semibold","Обработка видео"],["Body","text-base","Выберите параметры экспорта"],["Label","text-sm font-semibold","Формат"],["Caption","text-xs","MP4 или WebM"]];
+export default {title:"Foundations/Typography",parameters:{layout:"padded"}};
+export const Scale={render:()=> <div className="space-y-5 text-zinc-100 max-w-2xl">{styles.map(([n,css,s])=><section className="border-b border-zinc-700 pb-3" key={n}><small className="text-zinc-400">{n} · {css}</small><div className={css}>{s}</div></section>)}<div className="font-mono text-sm">00:25 · 1920×1080</div></div>};
